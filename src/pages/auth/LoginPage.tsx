@@ -190,7 +190,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Indian Monuments Skyline Accent */}
         <div className="pt-2">
-          <IndianMonumentsSkyline className="w-full text-emerald-800/15" tagline="Bharat Ki Khoj Ab Aur Aasaan • Haryana" />
+          <IndianMonumentsSkyline className="w-full text-emerald-800/15" tagline="Bharat Ki Khoj Ab Aur Aasaan • India" />
         </div>
       </div>
     </div>

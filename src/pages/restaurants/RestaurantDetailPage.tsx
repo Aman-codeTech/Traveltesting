@@ -109,7 +109,7 @@ export const RestaurantDetailPage: React.FC = () => {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-4">
-        <div className="w-12 h-12 border-4 border-[#1B5E20] border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <div className="w-12 h-12 border-4 border-[#0F766E] border-t-transparent rounded-full animate-spin mx-auto"></div>
         <p className="text-slate-500 text-sm">Loading restaurant profile &amp; culinary gallery...</p>
       </div>
     );
@@ -119,8 +119,8 @@ export const RestaurantDetailPage: React.FC = () => {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
         <Utensils className="w-16 h-16 text-slate-300 mx-auto" />
-        <h2 className="text-2xl font-bold text-slate-900 font-heading">Restaurant Not Found</h2>
-        <Link to="/restaurants" className="inline-block px-6 py-2.5 bg-[#1B5E20] hover:bg-[#154a19] text-white rounded-xl text-sm font-semibold">
+        <h2 className="text-2xl font-bold text-[#0B192C] font-heading">Restaurant Not Found</h2>
+        <Link to="/restaurants" className="inline-block px-6 py-2.5 bg-[#0F766E] hover:bg-[#0B192C] text-white rounded-xl text-sm font-semibold transition">
           Back to Restaurants
         </Link>
       </div>
@@ -135,15 +135,25 @@ export const RestaurantDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Breadcrumbs */}
-      <div className="flex items-center space-x-2 text-xs text-slate-500">
-        <Link to="/" className="hover:text-[#1B5E20]">Home</Link>
-        <span>/</span>
-        <Link to="/restaurants" className="hover:text-[#1B5E20]">Restaurants</Link>
-        <span>/</span>
-        <Link to={`/restaurants?city_id=${restaurant.city_id}`} className="hover:text-[#1B5E20]">{restaurant.city_name}</Link>
-        <span>/</span>
-        <span className="text-slate-900 font-semibold">{restaurant.name}</span>
+      {/* Top Navigation Row */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center space-x-2 text-xs text-slate-500">
+          <Link to="/" className="hover:text-[#0F766E]">Home</Link>
+          <span>/</span>
+          <Link to="/restaurants" className="hover:text-[#0F766E]">Restaurants</Link>
+          <span>/</span>
+          <Link to={`/restaurants?city_id=${restaurant.city_id}`} className="hover:text-[#0F766E]">{restaurant.city_name}</Link>
+          <span>/</span>
+          <span className="text-slate-900 font-semibold">{restaurant.name}</span>
+        </div>
+
+        <button
+          onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign('/restaurants')}
+          className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-[#FAF9F6] text-xs font-semibold shadow-2xs transition"
+        >
+          <ChevronLeft className="w-4 h-4 text-[#0F766E]" />
+          <span>Back to Restaurants / Itinerary</span>
+        </button>
       </div>
 
       {/* Main Banner & Multi-photo Viewport */}
@@ -196,13 +206,13 @@ export const RestaurantDetailPage: React.FC = () => {
           {/* Header Details */}
           <div className="absolute bottom-6 left-6 right-6 text-white space-y-2 z-10">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-[#1B5E20] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs">
+              <span className="bg-[#0F766E] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs">
                 {restaurant.city_name}
               </span>
-              <span className="bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs">
+              <span className="bg-[#2DD4BF] text-[#0B192C] text-xs font-bold px-3 py-1 rounded-full shadow-xs">
                 {restaurant.cuisine}
               </span>
-              <span className="bg-amber-400 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-full flex items-center space-x-1 shadow-xs">
+              <span className="bg-[#FF6B35] text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center space-x-1 shadow-xs">
                 <Star className="w-3.5 h-3.5 fill-current" />
                 <span>{restaurant.rating} / 5</span>
               </span>
@@ -210,7 +220,7 @@ export const RestaurantDetailPage: React.FC = () => {
 
             <h1 className="text-3xl sm:text-5xl font-bold font-heading drop-shadow-md">{restaurant.name}</h1>
             <p className="text-slate-200 text-xs sm:text-sm">
-              Average Cost: <strong className="text-[#F9C74F]">₹{restaurant.avg_cost_for_two} for two people</strong>
+              Average Cost: <strong className="text-[#2DD4BF]">₹{restaurant.avg_cost_for_two} for two people</strong>
             </p>
           </div>
         </div>

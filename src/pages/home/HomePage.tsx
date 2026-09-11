@@ -143,65 +143,66 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="space-y-16 pb-20">
-      {/* 0. TOP GREETING & QUICK ACTIONS BAR (Reference Screen 2) */}
+      {/* 0. TOP GREETING & QUICK ACTIONS BAR */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B5E20]/15 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="bg-[#FAF9F6] rounded-3xl p-6 sm:p-8 border border-[#0F766E]/20 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#1B5E20] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-              {t('builtInHaryana')}
+            <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E] bg-[#2DD4BF]/15 px-3.5 py-1 rounded-full border border-[#2DD4BF]/30 inline-flex items-center space-x-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#FF6B35]" />
+              <span>{t('builtInHaryana')}</span>
             </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-heading">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0B192C] font-heading">
               {t('namasteGreeting')}
             </h2>
-            <p className="text-slate-500 text-sm font-medium">
+            <p className="text-slate-600 text-sm font-medium">
               {t('whereToGoToday')}
             </p>
           </div>
 
-          {/* 4 Quick Category Action Pills (Reference Screen 2) */}
+          {/* 4 Quick Category Action Pills */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full md:w-auto">
             <Link
               to="/plan-trip"
-              className="p-3.5 rounded-2xl bg-emerald-50/80 hover:bg-emerald-100/90 border border-emerald-200/80 text-center flex flex-col items-center justify-center transition card-hover group"
+              className="p-3.5 rounded-2xl bg-[#FF6B35]/10 hover:bg-[#FF6B35]/20 border border-[#FF6B35]/30 text-center flex flex-col items-center justify-center transition card-hover group"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#1B5E20] text-white flex items-center justify-center mb-1.5 shadow-xs group-hover:scale-110 transition">
-                <Sparkles className="w-5 h-5 text-[#F9C74F]" />
+              <div className="w-10 h-10 rounded-xl bg-[#FF6B35] text-white flex items-center justify-center mb-1.5 shadow-sm group-hover:scale-110 transition">
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xs font-bold text-[#1B5E20]">{t('planTrip')}</span>
-              <span className="text-[10px] text-emerald-700">AI Architect</span>
+              <span className="text-xs font-bold text-[#FF6B35]">{t('planTrip')}</span>
+              <span className="text-[10px] text-slate-500 font-medium">AI Architect</span>
             </Link>
 
             <Link
               to="/explore"
-              className="p-3.5 rounded-2xl bg-amber-50/80 hover:bg-amber-100/90 border border-amber-200/80 text-center flex flex-col items-center justify-center transition card-hover group"
+              className="p-3.5 rounded-2xl bg-[#0F766E]/10 hover:bg-[#0F766E]/20 border border-[#0F766E]/30 text-center flex flex-col items-center justify-center transition card-hover group"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#F9C74F] text-slate-900 flex items-center justify-center mb-1.5 shadow-xs group-hover:scale-110 transition">
-                <Compass className="w-5 h-5 text-slate-900" />
+              <div className="w-10 h-10 rounded-xl bg-[#0F766E] text-white flex items-center justify-center mb-1.5 shadow-sm group-hover:scale-110 transition">
+                <Compass className="w-5 h-5 text-[#2DD4BF]" />
               </div>
-              <span className="text-xs font-bold text-amber-900">{t('exploreIndia')}</span>
-              <span className="text-[10px] text-amber-700">40+ Cities</span>
+              <span className="text-xs font-bold text-[#0F766E]">{t('exploreIndia')}</span>
+              <span className="text-[10px] text-slate-500 font-medium">16+ Cities</span>
             </Link>
 
             <Link
-              to="/plan-trip"
-              className="p-3.5 rounded-2xl bg-blue-50/80 hover:bg-blue-100/90 border border-blue-200/80 text-center flex flex-col items-center justify-center transition card-hover group"
+              to="/hotels"
+              className="p-3.5 rounded-2xl bg-[#0B192C]/5 hover:bg-[#0B192C]/10 border border-[#0B192C]/15 text-center flex flex-col items-center justify-center transition card-hover group"
             >
-              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center mb-1.5 shadow-xs group-hover:scale-110 transition">
-                <Bot className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-xl bg-[#0B192C] text-white flex items-center justify-center mb-1.5 shadow-sm group-hover:scale-110 transition">
+                <HotelIcon className="w-5 h-5 text-[#2DD4BF]" />
               </div>
-              <span className="text-xs font-bold text-blue-900">{t('aiAssistant')}</span>
-              <span className="text-[10px] text-blue-700">Instant Chat</span>
+              <span className="text-xs font-bold text-[#0B192C]">Hotels</span>
+              <span className="text-[10px] text-slate-500 font-medium">Stays & Havelis</span>
             </Link>
 
             <Link
               to="/dashboard"
-              className="p-3.5 rounded-2xl bg-amber-50/80 hover:bg-amber-100/90 border border-amber-200/80 text-center flex flex-col items-center justify-center transition card-hover group"
+              className="p-3.5 rounded-2xl bg-[#2DD4BF]/15 hover:bg-[#2DD4BF]/25 border border-[#2DD4BF]/40 text-center flex flex-col items-center justify-center transition card-hover group"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#F3722C] text-white flex items-center justify-center mb-1.5 shadow-xs group-hover:scale-110 transition">
+              <div className="w-10 h-10 rounded-xl bg-[#0F766E] text-white flex items-center justify-center mb-1.5 shadow-sm group-hover:scale-110 transition">
                 <Luggage className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xs font-bold text-slate-800">{t('myTrips')}</span>
-              <span className="text-[10px] text-slate-600">Portfolio</span>
+              <span className="text-xs font-bold text-[#0B192C]">{t('myTrips')}</span>
+              <span className="text-[10px] text-slate-500 font-medium">Portfolio</span>
             </Link>
           </div>
         </div>
@@ -259,61 +260,92 @@ export const HomePage: React.FC = () => {
         </div>
 
         {/* Hero Central Content */}
-        <div className="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 text-center text-white space-y-8 pt-12">
-          <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-[#1B5E20]/50 border border-emerald-400/40 backdrop-blur-md text-[#F9C74F] text-xs sm:text-sm font-semibold animate-pulse">
-            <Sparkles className="w-4 h-4 text-[#F9C74F]" />
-            <span>AI-Driven India Tourism Intelligence</span>
+        <div className="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 text-center text-white space-y-6 pt-12 pb-8">
+          <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-[#0F766E]/60 border border-[#2DD4BF]/40 backdrop-blur-md text-[#2DD4BF] text-xs sm:text-sm font-semibold shadow-md">
+            <Sparkles className="w-4 h-4 text-[#FF6B35]" />
+            <span>AI-Driven India Tourism Companion</span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-tight font-heading">
-            Discover India. <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F9C74F] via-emerald-300 to-[#FAF9F6]">
-              Plan Smarter.
-            </span>{' '}
-            Travel Better.
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-tight font-heading text-white">
+            TRAVELSAATHI AI
           </h1>
 
-          <p className="text-lg sm:text-xl text-slate-200 font-light max-w-2xl mx-auto leading-relaxed">
-            Your comprehensive AI companion for customized itineraries, hidden gems, heritage stays, authentic dining, and verified local taxis.
+          <p className="text-lg sm:text-2xl text-[#FAF9F6] font-medium max-w-3xl mx-auto leading-relaxed drop-shadow-sm">
+            A smart AI-powered travel companion for exploring India.
           </p>
 
-          {/* Dual Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-            <Link
-              to="/plan-trip"
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-[#1B5E20] via-[#2E7D32] to-[#154a19] text-white font-bold text-base shadow-xl shadow-emerald-950/40 hover:scale-105 transition transform flex items-center justify-center space-x-2"
-            >
-              <Sparkles className="w-5 h-5 text-[#F9C74F]" />
-              <span>Plan My Trip</span>
-            </Link>
+          <p className="text-sm sm:text-base text-slate-300 font-light max-w-2xl mx-auto">
+            Personalized day-by-day itineraries, handpicked stays, authentic regional dining, and verified local taxis across 16+ iconic Indian destinations.
+          </p>
 
-            <Link
-              to="/explore"
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white font-semibold text-base transition flex items-center justify-center space-x-2"
-            >
-              <Compass className="w-5 h-5 text-[#F9C74F]" />
-              <span>Explore India</span>
-            </Link>
+          {/* Primary CTA + Functional Options Prominently Displayed */}
+          <div className="pt-2 space-y-4">
+            {/* Primary CTA Button */}
+            <div className="flex justify-center">
+              <Link
+                to="/plan-trip"
+                className="w-full sm:w-auto px-10 py-4 rounded-2xl bg-gradient-to-r from-[#FF6B35] to-[#E85D04] text-white font-extrabold text-lg shadow-2xl shadow-orange-950/60 hover:scale-105 transition transform flex items-center justify-center space-x-3 border border-white/20"
+              >
+                <Sparkles className="w-6 h-6 text-[#FAF9F6]" />
+                <span>Plan My Trip</span>
+                <ArrowRight className="w-5 h-5 text-[#FAF9F6]" />
+              </Link>
+            </div>
+
+            {/* Prominent Functional Options Alongside */}
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <Link
+                to="/hotels"
+                className="px-5 py-3 rounded-xl bg-[#0F766E]/85 hover:bg-[#0F766E] border border-[#2DD4BF]/40 text-[#FAF9F6] text-sm font-bold backdrop-blur-md transition flex items-center space-x-2 shadow-lg shadow-black/20 hover:scale-105"
+              >
+                <HotelIcon className="w-4 h-4 text-[#2DD4BF]" />
+                <span>Hotels</span>
+              </Link>
+
+              <Link
+                to="/restaurants"
+                className="px-5 py-3 rounded-xl bg-[#0F766E]/85 hover:bg-[#0F766E] border border-[#2DD4BF]/40 text-[#FAF9F6] text-sm font-bold backdrop-blur-md transition flex items-center space-x-2 shadow-lg shadow-black/20 hover:scale-105"
+              >
+                <Utensils className="w-4 h-4 text-[#2DD4BF]" />
+                <span>Restaurants</span>
+              </Link>
+
+              <Link
+                to="/taxis"
+                className="px-5 py-3 rounded-xl bg-[#0F766E]/85 hover:bg-[#0F766E] border border-[#2DD4BF]/40 text-[#FAF9F6] text-sm font-bold backdrop-blur-md transition flex items-center space-x-2 shadow-lg shadow-black/20 hover:scale-105"
+              >
+                <Car className="w-4 h-4 text-[#2DD4BF]" />
+                <span>Taxi</span>
+              </Link>
+
+              <Link
+                to="/business/register"
+                className="px-5 py-3 rounded-xl bg-[#0B192C]/80 hover:bg-[#0B192C] border border-white/25 text-[#FAF9F6] text-sm font-bold backdrop-blur-md transition flex items-center space-x-2 shadow-lg shadow-black/20 hover:scale-105"
+              >
+                <Briefcase className="w-4 h-4 text-[#FF6B35]" />
+                <span>Advertise Your Business</span>
+              </Link>
+            </div>
           </div>
 
           {/* Quick Search Floating Form */}
           <form
             onSubmit={handleSearchSubmit}
-            className="max-w-2xl mx-auto mt-6 bg-white/95 backdrop-blur-md p-2 rounded-2xl shadow-2xl flex items-center border border-white/40"
+            className="max-w-2xl mx-auto mt-6 bg-[#FAF9F6]/95 backdrop-blur-md p-2 rounded-2xl shadow-2xl flex items-center border border-white/40"
           >
             <div className="flex items-center pl-3 pr-2 text-slate-400">
-              <Search className="w-5 h-5 text-[#1B5E20]" />
+              <Search className="w-5 h-5 text-[#0F766E]" />
             </div>
             <input
               type="text"
               placeholder="Search destination, city, or monument (e.g. Jaipur, Taj Mahal, Goa)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-2 py-3 text-slate-800 text-sm focus:outline-hidden bg-transparent placeholder:text-slate-400 font-medium"
+              className="w-full px-2 py-3 text-[#0B192C] text-sm focus:outline-hidden bg-transparent placeholder:text-slate-400 font-medium"
             />
             <button
               type="submit"
-              className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-xl font-semibold text-sm transition shrink-0 shadow-sm"
+              className="bg-[#0B192C] hover:bg-[#0F766E] text-white px-6 py-3 rounded-xl font-semibold text-sm transition shrink-0 shadow-sm"
             >
               Search
             </button>
@@ -325,11 +357,11 @@ export const HomePage: React.FC = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#1B5E20]">Categories</span>
-            <h2 className="text-3xl font-bold text-slate-900 mt-1 font-heading">Explore by Travel Theme</h2>
-            <p className="text-slate-500 text-sm mt-1">Discover India through the lenses of history, spirituality, mountains, and culinary heritage.</p>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E]">Categories</span>
+            <h2 className="text-3xl font-bold text-[#0B192C] mt-1 font-heading">Explore by Travel Theme</h2>
+            <p className="text-slate-600 text-sm mt-1">Discover India through the lenses of history, spirituality, mountains, and culinary heritage.</p>
           </div>
-          <Link to="/explore" className="text-sm font-semibold text-[#1B5E20] hover:text-[#154a19] flex items-center space-x-1">
+          <Link to="/explore" className="text-sm font-semibold text-[#0F766E] hover:text-[#0B192C] flex items-center space-x-1">
             <span>View all themes</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
@@ -340,10 +372,10 @@ export const HomePage: React.FC = () => {
             <Link
               key={cat.name}
               to={`/explore?category=${cat.name}`}
-              className="group p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-emerald-300 shadow-xs hover:shadow-md transition text-center card-hover"
+              className="group p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-[#2DD4BF] shadow-xs hover:shadow-md transition text-center card-hover"
             >
               <span className="text-3xl block mb-2 transform group-hover:scale-110 transition">{cat.icon}</span>
-              <h4 className="font-bold text-sm text-slate-800 group-hover:text-[#1B5E20] transition">{cat.name}</h4>
+              <h4 className="font-bold text-sm text-slate-800 group-hover:text-[#0F766E] transition">{cat.name}</h4>
               <p className="text-[10px] text-slate-400 mt-1">{cat.count}</p>
             </Link>
           ))}
@@ -352,15 +384,15 @@ export const HomePage: React.FC = () => {
 
       {/* 2.5 EXPERIENCE THE REAL INDIA (Reference Screen 7) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-[#1B5E20] via-[#246B2A] to-[#144818] rounded-3xl p-6 sm:p-8 text-white mb-8 relative overflow-hidden shadow-xl shadow-[#1B5E20]/15">
+        <div className="bg-gradient-to-r from-[#0B192C] via-[#0F766E] to-[#0B192C] rounded-3xl p-6 sm:p-8 text-white mb-8 relative overflow-hidden shadow-xl shadow-black/20">
           <div className="max-w-xl space-y-2 relative z-10">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#F9C74F]">
-              Rural & Cultural Immersion
+            <span className="text-xs font-bold uppercase tracking-widest text-[#2DD4BF]">
+              Rural &amp; Cultural Immersion
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold font-heading text-white">
               {t('experienceRealIndia')}
             </h2>
-            <p className="text-emerald-100 text-sm">
+            <p className="text-[#FAF9F6]/90 text-sm">
               {t('experienceSub')}
             </p>
           </div>
@@ -372,7 +404,7 @@ export const HomePage: React.FC = () => {
 
         {/* 3 Real Experience Cards (Reference Screen 7) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1: Traditional Haryanvi Food Tour */}
+          {/* Card 1: Traditional Food Tour */}
           <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-xs card-hover flex flex-col justify-between">
             <div>
               <div className="h-48 overflow-hidden relative">
@@ -381,27 +413,27 @@ export const HomePage: React.FC = () => {
                   alt="Traditional Food Tour"
                   className="w-full h-full object-cover"
                 />
-                <span className="absolute top-3 left-3 bg-[#1B5E20] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
-                  Food & Dhaba Trail
+                <span className="absolute top-3 left-3 bg-[#0F766E] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
+                  Food &amp; Dhaba Trail
                 </span>
               </div>
               <div className="p-5 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#1B5E20] flex items-center space-x-1">
-                    <Star className="w-3.5 h-3.5 fill-[#F9C74F] text-[#F9C74F]" />
+                  <span className="font-bold text-[#0F766E] flex items-center space-x-1">
+                    <Star className="w-3.5 h-3.5 fill-[#FF6B35] text-[#FF6B35]" />
                     <span>4.8</span>
                   </span>
                   <span className="text-slate-400">⏱️ 2h duration</span>
-                  <span className="font-bold text-slate-900 font-heading">₹800</span>
+                  <span className="font-bold text-[#0B192C] font-heading">₹800</span>
                 </div>
-                <h3 className="font-bold text-base text-slate-900 font-heading">{t('foodTourTitle')}</h3>
+                <h3 className="font-bold text-base text-[#0B192C] font-heading">{t('foodTourTitle')}</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">{t('foodTourDesc')}</p>
               </div>
             </div>
             <div className="p-5 pt-0">
               <Link
                 to="/restaurants"
-                className="w-full py-2.5 bg-[#1B5E20] hover:bg-[#144818] text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1"
+                className="w-full py-2.5 bg-[#0F766E] hover:bg-[#0B192C] text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1"
               >
                 <span>Explore Local Food</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -418,27 +450,27 @@ export const HomePage: React.FC = () => {
                   alt="Folk Dance Show"
                   className="w-full h-full object-cover"
                 />
-                <span className="absolute top-3 left-3 bg-[#F9C74F] text-slate-950 text-[10px] font-bold px-2.5 py-1 rounded-full">
-                  Folk & Sang Heritage
+                <span className="absolute top-3 left-3 bg-[#0F766E] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
+                  Folk &amp; Cultural Heritage
                 </span>
               </div>
               <div className="p-5 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#1B5E20] flex items-center space-x-1">
-                    <Star className="w-3.5 h-3.5 fill-[#F9C74F] text-[#F9C74F]" />
+                  <span className="font-bold text-[#0F766E] flex items-center space-x-1">
+                    <Star className="w-3.5 h-3.5 fill-[#FF6B35] text-[#FF6B35]" />
                     <span>4.7</span>
                   </span>
                   <span className="text-slate-400">⏱️ 2h evening</span>
-                  <span className="font-bold text-slate-900 font-heading">₹600</span>
+                  <span className="font-bold text-[#0B192C] font-heading">₹600</span>
                 </div>
-                <h3 className="font-bold text-base text-slate-900 font-heading">{t('folkShowTitle')}</h3>
+                <h3 className="font-bold text-base text-[#0B192C] font-heading">{t('folkShowTitle')}</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">{t('folkShowDesc')}</p>
               </div>
             </div>
             <div className="p-5 pt-0">
               <Link
                 to="/explore"
-                className="w-full py-2.5 bg-[#1B5E20] hover:bg-[#144818] text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1"
+                className="w-full py-2.5 bg-[#0F766E] hover:bg-[#0B192C] text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1"
               >
                 <span>View Cultural Events</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -455,27 +487,27 @@ export const HomePage: React.FC = () => {
                   alt="Village Homestay"
                   className="w-full h-full object-cover"
                 />
-                <span className="absolute top-3 left-3 bg-[#F3722C] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
-                  Desi Farm Stay
+                <span className="absolute top-3 left-3 bg-[#FF6B35] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
+                  Farm &amp; Heritage Stay
                 </span>
               </div>
               <div className="p-5 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#1B5E20] flex items-center space-x-1">
-                    <Star className="w-3.5 h-3.5 fill-[#F9C74F] text-[#F9C74F]" />
+                  <span className="font-bold text-[#0F766E] flex items-center space-x-1">
+                    <Star className="w-3.5 h-3.5 fill-[#FF6B35] text-[#FF6B35]" />
                     <span>4.9</span>
                   </span>
                   <span className="text-slate-400">⏱️ 1 Day / Night</span>
-                  <span className="font-bold text-slate-900 font-heading">₹1,500</span>
+                  <span className="font-bold text-[#0B192C] font-heading">₹1,500</span>
                 </div>
-                <h3 className="font-bold text-base text-slate-900 font-heading">{t('villageHomestayTitle')}</h3>
+                <h3 className="font-bold text-base text-[#0B192C] font-heading">{t('villageHomestayTitle')}</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">{t('villageHomestayDesc')}</p>
               </div>
             </div>
             <div className="p-5 pt-0">
               <Link
                 to="/hotels"
-                className="w-full py-2.5 bg-[#1B5E20] hover:bg-[#144818] text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1"
+                className="w-full py-2.5 bg-[#0F766E] hover:bg-[#0B192C] text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1"
               >
                 <span>Book Farm Homestay</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -489,12 +521,12 @@ export const HomePage: React.FC = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#1B5E20]">Featured Destinations</span>
-            <h2 className="text-3xl font-bold text-slate-900 mt-1 font-heading">Top Indian Cities to Visit</h2>
-            <p className="text-slate-500 text-sm mt-1">Curated royal capitals, coastal heavens, and Himalayan retreats.</p>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E]">Featured Destinations</span>
+            <h2 className="text-3xl font-bold text-[#0B192C] mt-1 font-heading">Top Indian Cities to Visit</h2>
+            <p className="text-slate-600 text-sm mt-1">Curated royal capitals, coastal heavens, and Himalayan retreats.</p>
           </div>
-          <Link to="/explore" className="text-sm font-semibold text-[#1B5E20] hover:text-[#154a19] flex items-center space-x-1">
-            <span>See all 40+ Cities</span>
+          <Link to="/explore" className="text-sm font-semibold text-[#0F766E] hover:text-[#0B192C] flex items-center space-x-1">
+            <span>See all 16+ Cities</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -512,15 +544,15 @@ export const HomePage: React.FC = () => {
                   alt={city.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-slate-900 text-xs font-bold px-2.5 py-1 rounded-full shadow-xs">
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0B192C] via-black/30 to-transparent"></div>
+                <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[#0B192C] text-xs font-bold px-2.5 py-1 rounded-full shadow-xs">
                   {city.state_name || 'India'}
                 </span>
                 <div className="absolute bottom-3 left-3 right-3 text-white">
                   <h3 className="text-xl font-bold font-heading">{city.name}</h3>
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {city.categories?.slice(0, 2).map((cat) => (
-                      <span key={cat} className="text-[10px] bg-white/20 backdrop-blur-xs px-2 py-0.5 rounded-sm">
+                      <span key={cat} className="text-[10px] bg-white/20 backdrop-blur-xs px-2 py-0.5 rounded-sm text-white">
                         {cat}
                       </span>
                     ))}
@@ -531,7 +563,7 @@ export const HomePage: React.FC = () => {
                 <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
                   {city.description}
                 </p>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#1B5E20]">
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#0F766E]">
                   <span>Explore City Guide</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition" />
                 </div>
@@ -542,17 +574,17 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 4. CURATED HIDDEN GEMS (USP 1) */}
-      <section className="bg-gradient-to-b from-emerald-50/50 via-[#FAF9F6] to-emerald-50/20 py-16 border-y border-emerald-100">
+      <section className="bg-[#FAF9F6] py-16 border-y border-[#2DD4BF]/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-[#1B5E20] bg-emerald-100/80 px-2.5 py-1 rounded-full">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E] bg-[#2DD4BF]/20 px-2.5 py-1 rounded-full">
                 Offbeat Discoveries
               </span>
-              <h2 className="text-3xl font-bold text-slate-900 mt-2 font-heading">India’s Secret Hidden Gems</h2>
+              <h2 className="text-3xl font-bold text-[#0B192C] mt-2 font-heading">India’s Secret Hidden Gems</h2>
               <p className="text-slate-600 text-sm mt-1">Escape the crowds. Explore secluded waterfalls, geometric stepwells, and sacred forests.</p>
             </div>
-            <Link to="/hidden-gems" className="text-sm font-semibold text-[#1B5E20] hover:text-[#154a19] flex items-center space-x-1">
+            <Link to="/hidden-gems" className="text-sm font-semibold text-[#0F766E] hover:text-[#0B192C] flex items-center space-x-1">
               <span>View all hidden gems</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
@@ -573,15 +605,15 @@ export const HomePage: React.FC = () => {
                   <span className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-full">
                     {gem.city_name}
                   </span>
-                  <span className="absolute bottom-3 right-3 bg-amber-500 text-slate-950 text-xs font-bold px-2 py-0.5 rounded-full flex items-center space-x-1">
+                  <span className="absolute bottom-3 right-3 bg-[#FF6B35] text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center space-x-1">
                     <Star className="w-3 h-3 fill-current" />
                     <span>{gem.rating}</span>
                   </span>
                 </div>
                 <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
                   <div>
-                    <span className="text-[11px] font-bold text-[#1B5E20] uppercase tracking-wider">{gem.category}</span>
-                    <h4 className="text-lg font-bold text-slate-900 mt-1 font-heading">{gem.name}</h4>
+                    <span className="text-[11px] font-bold text-[#0F766E] uppercase tracking-wider">{gem.category}</span>
+                    <h4 className="text-lg font-bold text-[#0B192C] mt-1 font-heading">{gem.name}</h4>
                     <p className="text-xs text-slate-600 mt-1.5 line-clamp-2 leading-relaxed">{gem.description}</p>
                   </div>
                   <div className="pt-3 border-t border-slate-100 text-xs text-slate-500 space-y-1">
@@ -603,32 +635,32 @@ export const HomePage: React.FC = () => {
 
       {/* 5. TAXI & LOCAL TRANSPORT (WITH TAXI NEAR ME CTA) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-slate-900 rounded-3xl p-8 lg:p-12 text-white relative overflow-hidden shadow-2xl">
-          <div className="absolute -right-16 -top-16 w-80 h-80 rounded-full bg-emerald-600/20 blur-3xl pointer-events-none"></div>
+        <div className="bg-[#0B192C] rounded-3xl p-8 lg:p-12 text-white relative overflow-hidden shadow-2xl">
+          <div className="absolute -right-16 -top-16 w-80 h-80 rounded-full bg-[#0F766E]/25 blur-3xl pointer-events-none"></div>
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div className="space-y-4">
-              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#1B5E20]/40 border border-emerald-500/40 text-xs font-semibold text-[#F9C74F]">
+              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#0F766E]/50 border border-[#2DD4BF]/40 text-xs font-semibold text-[#2DD4BF]">
                 <Car className="w-3.5 h-3.5" />
                 <span>Verified Local Fleets</span>
               </span>
-              <h2 className="text-3xl sm:text-4xl font-bold font-heading">
-                Reliable City & Outstation Taxis at Fair Rates
+              <h2 className="text-3xl sm:text-4xl font-bold font-heading text-white">
+                Reliable City &amp; Outstation Taxis at Fair Rates
               </h2>
-              <p className="text-slate-300 text-sm leading-relaxed">
+              <p className="text-[#FAF9F6]/80 text-sm leading-relaxed">
                 Connect directly with verified local taxi drivers, autos, and SUVs. No hidden surge pricing. Check driver ratings, estimated fares, and book seamlessly.
               </p>
 
               <div className="flex flex-wrap gap-3 pt-2">
                 <Link
                   to="/taxis/near-me"
-                  className="px-6 py-3.5 rounded-xl bg-[#1B5E20] hover:bg-[#154a19] font-bold text-sm text-white shadow-lg shadow-emerald-950/40 transition flex items-center space-x-2"
+                  className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#FF6B35] to-[#E85D04] hover:from-[#E85D04] hover:to-[#FF6B35] font-bold text-sm text-white shadow-lg shadow-orange-950/40 transition flex items-center space-x-2"
                 >
                   <MapPin className="w-4 h-4" />
                   <span>Find Taxi Near Me (GPS)</span>
                 </Link>
                 <Link
                   to="/taxis"
-                  className="px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 font-semibold text-sm text-white transition"
+                  className="px-6 py-3.5 rounded-xl bg-[#0F766E]/60 hover:bg-[#0F766E] border border-[#2DD4BF]/40 font-semibold text-sm text-white transition"
                 >
                   Browse Taxi Fleet
                 </Link>
@@ -643,19 +675,19 @@ export const HomePage: React.FC = () => {
                   className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex items-center justify-between hover:bg-white/15 transition"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-[#F9C74F] flex items-center justify-center font-bold text-sm">
+                    <div className="w-10 h-10 rounded-xl bg-[#0F766E]/40 text-[#2DD4BF] flex items-center justify-center font-bold text-sm border border-[#2DD4BF]/30">
                       <Car className="w-5 h-5" />
                     </div>
                     <div>
                       <h4 className="font-bold text-sm text-white">{taxi.service_name}</h4>
-                      <p className="text-xs text-slate-400">{taxi.vehicle_type} • Driver: {taxi.driver_name} • {taxi.city_name}</p>
+                      <p className="text-xs text-slate-300">{taxi.vehicle_type} • Driver: {taxi.driver_name} • {taxi.city_name}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs text-slate-400 block">Base ₹{taxi.base_fare}</span>
+                    <span className="text-xs text-slate-300 block">Base ₹{taxi.base_fare}</span>
                     <button
                       onClick={() => openBooking(taxi)}
-                      className="mt-1 px-3 py-1 rounded-lg bg-[#1B5E20] hover:bg-[#154a19] text-xs font-bold text-white transition"
+                      className="mt-1 px-3 py-1 rounded-lg bg-[#0F766E] hover:bg-[#2DD4BF] hover:text-[#0B192C] text-xs font-bold text-white transition"
                     >
                       Book Now
                     </button>
@@ -674,11 +706,11 @@ export const HomePage: React.FC = () => {
           <div>
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#1B5E20]">Iconic Sights &amp; Heritage</span>
-                <h2 className="text-3xl font-bold text-slate-900 mt-1 font-heading">Must-Visit Monuments &amp; Attractions</h2>
-                <p className="text-slate-500 text-sm mt-1">Discover world-renowned heritage wonders, royal forts, and spiritual river ghats.</p>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E]">Iconic Sights &amp; Heritage</span>
+                <h2 className="text-3xl font-bold text-[#0B192C] mt-1 font-heading">Must-Visit Monuments &amp; Attractions</h2>
+                <p className="text-slate-600 text-sm mt-1">Discover world-renowned heritage wonders, royal forts, and spiritual river ghats.</p>
               </div>
-              <Link to="/explore" className="text-sm font-semibold text-[#1B5E20] hover:text-[#154a19] flex items-center space-x-1">
+              <Link to="/explore" className="text-sm font-semibold text-[#0F766E] hover:text-[#0B192C] flex items-center space-x-1">
                 <span>View all attractions</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
@@ -698,7 +730,7 @@ export const HomePage: React.FC = () => {
                         alt={place.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                       />
-                      <span className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+                      <span className="absolute top-3 left-3 bg-[#0B192C]/80 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-full">
                         {place.city_name}
                       </span>
                       {place.gallery && place.gallery.length > 1 && (
@@ -707,14 +739,14 @@ export const HomePage: React.FC = () => {
                           <span>{place.gallery.length} Photos</span>
                         </span>
                       )}
-                      <span className="absolute bottom-3 right-3 bg-white text-slate-900 text-xs font-bold px-2.5 py-1 rounded-full shadow-xs">
+                      <span className="absolute bottom-3 right-3 bg-white text-[#0B192C] text-xs font-bold px-2.5 py-1 rounded-full shadow-xs">
                         {place.entry_fee === 0 ? 'Free Entry' : `₹${place.entry_fee}`}
                       </span>
                     </div>
 
                     <div className="p-5 space-y-2">
-                      <span className="text-[10px] font-bold text-[#1B5E20] uppercase tracking-wider">{place.category}</span>
-                      <h3 className="font-bold text-base text-slate-900 group-hover:text-[#1B5E20] transition font-heading">
+                      <span className="text-[10px] font-bold text-[#0F766E] uppercase tracking-wider">{place.category}</span>
+                      <h3 className="font-bold text-base text-[#0B192C] group-hover:text-[#0F766E] transition font-heading">
                         {place.name}
                       </h3>
                       <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{place.description}</p>
@@ -723,8 +755,8 @@ export const HomePage: React.FC = () => {
 
                   <div className="p-5 pt-0">
                     <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-                      <span className="text-amber-500 font-bold flex items-center space-x-1">
-                        <Star className="w-3.5 h-3.5 fill-current" />
+                      <span className="text-[#FF6B35] font-bold flex items-center space-x-1">
+                        <Star className="w-3.5 h-3.5 fill-[#FF6B35] text-[#FF6B35]" />
                         <span>{place.rating}</span>
                       </span>
                       <span>{place.recommended_duration_hours}h duration</span>
@@ -740,11 +772,11 @@ export const HomePage: React.FC = () => {
         <div>
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-[#1B5E20]">Stays &amp; Havelis</span>
-              <h2 className="text-3xl font-bold text-slate-900 mt-1 font-heading">Recommended Heritage &amp; Luxury Hotels</h2>
-              <p className="text-slate-500 text-sm mt-1">Rest in authentic royal havelis, luxury palaces, and cozy hill cottages.</p>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E]">Stays &amp; Havelis</span>
+              <h2 className="text-3xl font-bold text-[#0B192C] mt-1 font-heading">Recommended Heritage &amp; Luxury Hotels</h2>
+              <p className="text-slate-600 text-sm mt-1">Rest in authentic royal havelis, luxury palaces, and cozy hill cottages.</p>
             </div>
-            <Link to="/hotels" className="text-sm font-semibold text-[#1B5E20] hover:text-[#154a19] flex items-center space-x-1">
+            <Link to="/hotels" className="text-sm font-semibold text-[#0F766E] hover:text-[#0B192C] flex items-center space-x-1">
               <span>View all hotels</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
@@ -763,7 +795,7 @@ export const HomePage: React.FC = () => {
                     alt={hotel.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                   />
-                  <span className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+                  <span className="absolute top-3 left-3 bg-[#0B192C]/80 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-full">
                     {hotel.city_name}
                   </span>
                   {hotel.photos && hotel.photos.length > 1 && (
@@ -772,20 +804,20 @@ export const HomePage: React.FC = () => {
                       <span>{hotel.photos.length} Photos</span>
                     </span>
                   )}
-                  <span className="absolute bottom-3 right-3 bg-white text-slate-900 text-xs font-bold px-2.5 py-1 rounded-full shadow-xs">
+                  <span className="absolute bottom-3 right-3 bg-white text-[#0B192C] text-xs font-bold px-2.5 py-1 rounded-full shadow-xs">
                     ₹{hotel.price_per_night} / night
                   </span>
                 </div>
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="font-bold text-base text-slate-900 group-hover:text-[#1B5E20] transition font-heading">
+                    <h3 className="font-bold text-base text-[#0B192C] group-hover:text-[#0F766E] transition font-heading">
                       {hotel.name}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1 line-clamp-2">{hotel.description}</p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className="text-amber-500 font-bold flex items-center space-x-1">
-                      <Star className="w-3.5 h-3.5 fill-current" />
+                    <span className="text-[#FF6B35] font-bold flex items-center space-x-1">
+                      <Star className="w-3.5 h-3.5 fill-[#FF6B35] text-[#FF6B35]" />
                       <span>{hotel.rating}</span>
                     </span>
                     <span className="text-slate-400">{hotel.facilities?.slice(0, 2).join(' • ')}</span>
@@ -800,11 +832,11 @@ export const HomePage: React.FC = () => {
         <div>
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-[#1B5E20]">Culinary Journeys</span>
-              <h2 className="text-3xl font-bold text-slate-900 mt-1 font-heading">Iconic Flavours &amp; Dining</h2>
-              <p className="text-slate-500 text-sm mt-1">From Mughlai tandoor and Rajasthani thalis to Goan seafood curries.</p>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E]">Culinary Journeys</span>
+              <h2 className="text-3xl font-bold text-[#0B192C] mt-1 font-heading">Iconic Flavours &amp; Dining</h2>
+              <p className="text-slate-600 text-sm mt-1">From Mughlai tandoor and Rajasthani thalis to Goan seafood curries.</p>
             </div>
-            <Link to="/restaurants" className="text-sm font-semibold text-[#1B5E20] hover:text-[#154a19] flex items-center space-x-1">
+            <Link to="/restaurants" className="text-sm font-semibold text-[#0F766E] hover:text-[#0B192C] flex items-center space-x-1">
               <span>View all restaurants</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
@@ -823,7 +855,7 @@ export const HomePage: React.FC = () => {
                     alt={restaurant.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                   />
-                  <span className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+                  <span className="absolute top-3 left-3 bg-[#0B192C]/80 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-full">
                     {restaurant.city_name}
                   </span>
                   {restaurant.photos && restaurant.photos.length > 1 && (
@@ -832,14 +864,14 @@ export const HomePage: React.FC = () => {
                       <span>{restaurant.photos.length} Photos</span>
                     </span>
                   )}
-                  <span className="absolute bottom-3 right-3 bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-xs">
+                  <span className="absolute bottom-3 right-3 bg-[#0F766E] text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-xs">
                     ₹{restaurant.avg_cost_for_two} for two
                   </span>
                 </div>
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-[11px] font-bold text-[#1B5E20]">{restaurant.cuisine}</span>
-                    <h3 className="font-bold text-base text-slate-900 group-hover:text-[#1B5E20] transition font-heading mt-0.5">
+                    <span className="text-[11px] font-bold text-[#0F766E]">{restaurant.cuisine}</span>
+                    <h3 className="font-bold text-base text-[#0B192C] group-hover:text-[#0F766E] transition font-heading mt-0.5">
                       {restaurant.name}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1 line-clamp-2">
@@ -847,11 +879,11 @@ export const HomePage: React.FC = () => {
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className="text-amber-500 font-bold flex items-center space-x-1">
-                      <Star className="w-3.5 h-3.5 fill-current" />
+                    <span className="text-[#FF6B35] font-bold flex items-center space-x-1">
+                      <Star className="w-3.5 h-3.5 fill-[#FF6B35] text-[#FF6B35]" />
                       <span>{restaurant.rating}</span>
                     </span>
-                    <span className="text-[#1B5E20] font-semibold">View Menu →</span>
+                    <span className="text-[#0F766E] font-semibold">View Menu →</span>
                   </div>
                 </div>
               </Link>
@@ -861,52 +893,52 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* 7. HOW TRAVELSAATHI AI WORKS */}
-      <section className="bg-slate-100/70 py-16 border-y border-slate-200/60">
+      <section className="bg-[#FAF9F6] py-16 border-y border-[#0F766E]/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#1B5E20]">The Technology</span>
-            <h2 className="text-3xl font-bold text-slate-900 mt-1 font-heading">How TravelSaathi AI Works</h2>
-            <p className="text-slate-500 text-sm mt-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E]">The Technology</span>
+            <h2 className="text-3xl font-bold text-[#0B192C] mt-1 font-heading">How TravelSaathi AI Works</h2>
+            <p className="text-slate-600 text-sm mt-2">
               Combining a dynamic Indian tourism database with intelligent itinerary logic to generate personalized trips in seconds.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs relative">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-[#1B5E20] flex items-center justify-center font-bold text-lg mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#0F766E]/15 text-[#0F766E] flex items-center justify-center font-bold text-lg mb-4">
                 01
               </div>
-              <h4 className="font-bold text-base text-slate-900 font-heading">Set Preferences</h4>
+              <h4 className="font-bold text-base text-[#0B192C] font-heading">Set Preferences</h4>
               <p className="text-xs text-slate-500 mt-2 leading-relaxed">
                 Choose your target city, budget bracket, trip duration, transport mode, and specific interests.
               </p>
             </div>
 
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs relative">
-              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-lg mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#FF6B35]/15 text-[#FF6B35] flex items-center justify-center font-bold text-lg mb-4">
                 02
               </div>
-              <h4 className="font-bold text-base text-slate-900 font-heading">Multi-Factor AI Scoring</h4>
+              <h4 className="font-bold text-base text-[#0B192C] font-heading">Multi-Factor AI Scoring</h4>
               <p className="text-xs text-slate-500 mt-2 leading-relaxed">
                 Matches traveller profile with monument hours, crowd patterns, ratings, and Super Admin priorities.
               </p>
             </div>
 
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs relative">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-lg mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#2DD4BF]/25 text-[#0F766E] flex items-center justify-center font-bold text-lg mb-4">
                 03
               </div>
-              <h4 className="font-bold text-base text-slate-900 font-heading">Smart Route & Budget</h4>
+              <h4 className="font-bold text-base text-[#0B192C] font-heading">Smart Route &amp; Budget</h4>
               <p className="text-xs text-slate-500 mt-2 leading-relaxed">
                 Arranges sequence to prevent backtracking, calculates entry fees + hotel + meals, and warns if budget is exceeded.
               </p>
             </div>
 
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs relative">
-              <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#0B192C]/10 text-[#0B192C] flex items-center justify-center font-bold text-lg mb-4">
                 04
               </div>
-              <h4 className="font-bold text-base text-slate-900 font-heading">Instant Travel & Taxi</h4>
+              <h4 className="font-bold text-base text-[#0B192C] font-heading">Instant Travel &amp; Taxi</h4>
               <p className="text-xs text-slate-500 mt-2 leading-relaxed">
                 Book verified local taxis with 1-click directly from the itinerary or hail nearest cabs in real-time.
               </p>
@@ -917,19 +949,19 @@ export const HomePage: React.FC = () => {
 
       {/* 8. ADVERTISE YOUR BUSINESS BANNER */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-[#1B5E20] via-[#2E7D32] to-[#154a19] rounded-3xl p-8 sm:p-12 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
+        <div className="bg-gradient-to-r from-[#0B192C] via-[#0F766E] to-[#0B192C] rounded-3xl p-8 sm:p-12 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-8 border border-[#2DD4BF]/30">
           <div className="space-y-3 max-w-xl">
-            <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full">
+            <span className="text-xs font-bold uppercase tracking-wider bg-white/15 text-[#2DD4BF] border border-[#2DD4BF]/30 px-3 py-1 rounded-full">
               Business Partnership
             </span>
-            <h2 className="text-3xl font-bold font-heading">Do you run a Hotel, Restaurant, or Taxi Service?</h2>
-            <p className="text-white/90 text-sm leading-relaxed">
+            <h2 className="text-3xl font-bold font-heading text-white">Do you run a Hotel, Restaurant, or Taxi Service?</h2>
+            <p className="text-[#FAF9F6]/90 text-sm leading-relaxed">
               Register your business on TravelSaathi AI. Gain direct exposure to thousands of verified tourists planning trips to your city. Receive bookings with 0% middleman cut.
             </p>
           </div>
           <Link
             to="/business/register"
-            className="px-8 py-4 bg-white hover:bg-slate-50 text-[#1B5E20] font-bold text-sm rounded-2xl shadow-lg transition shrink-0 transform hover:scale-105"
+            className="px-8 py-4 bg-gradient-to-r from-[#FF6B35] to-[#E85D04] hover:from-[#E85D04] hover:to-[#FF6B35] text-white font-bold text-sm rounded-2xl shadow-xl shadow-orange-950/40 transition shrink-0 transform hover:scale-105"
           >
             Register Your Business Free →
           </Link>
@@ -939,8 +971,8 @@ export const HomePage: React.FC = () => {
       {/* 9. FREQUENTLY ASKED QUESTIONS */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-10">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#1B5E20]">Got Questions?</span>
-          <h2 className="text-3xl font-bold text-slate-900 mt-1 font-heading">Frequently Asked Questions</h2>
+          <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E]">Got Questions?</span>
+          <h2 className="text-3xl font-bold text-[#0B192C] mt-1 font-heading">Frequently Asked Questions</h2>
         </div>
 
         <div className="space-y-3">
@@ -968,10 +1000,10 @@ export const HomePage: React.FC = () => {
             >
               <button
                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                className="w-full px-6 py-4 text-left font-bold text-sm text-slate-900 flex items-center justify-between hover:bg-slate-50 transition"
+                className="w-full px-6 py-4 text-left font-bold text-sm text-[#0B192C] flex items-center justify-between hover:bg-slate-50 transition"
               >
                 <span>{faq.q}</span>
-                <span className="text-[#1B5E20] text-lg font-bold">{openFaq === idx ? '−' : '+'}</span>
+                <span className="text-[#FF6B35] text-lg font-bold">{openFaq === idx ? '−' : '+'}</span>
               </button>
               {openFaq === idx && (
                 <div className="px-6 pb-4 pt-1 text-xs text-slate-600 leading-relaxed border-t border-slate-100">

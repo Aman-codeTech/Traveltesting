@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS restaurants (
   description TEXT,
   photos_json TEXT,
   cuisine TEXT,
+  food_type TEXT DEFAULT 'both' CHECK(food_type IN ('veg', 'non_veg', 'both')),
   popular_dishes_json TEXT,
   facilities_json TEXT,
   opening_hours TEXT DEFAULT '10:00 AM - 11:00 PM',

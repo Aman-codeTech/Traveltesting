@@ -64,6 +64,7 @@ export const api = {
     const query = new URLSearchParams(params).toString();
     return request<{ success: boolean; data: any[] }>(`/hidden-gems?${query}`);
   },
+  search: (q: string) => request<{ success: boolean; data: any }>(`/search?q=${encodeURIComponent(q)}`),
 
   // Hotels
   getHotels: (params: Record<string, any> = {}) => {
@@ -151,8 +152,11 @@ export const api = {
   adminGlobalSearch: (q: string) => request<{ success: boolean; results: any }>(`/admin/search?q=${encodeURIComponent(q)}`),
 
   // Search & AI Assistant
-  search: (q: string) => request<{ success: boolean; data: { cities: any[]; places: any[]; hotels: any[]; restaurants: any[]; hiddenGems: any[] } }>(`/search?q=${encodeURIComponent(q)}`),
-  aiChat: (message: string) => request<{ success: boolean; reply: string; suggestions?: string[] }>('/ai/chat', { method: 'POST', body: JSON.stringify({ message }) }),
+  aiChat: (message: string, conversationHistory?: any[]) =>
+    request<{ success: boolean; reply: string; suggestions?: string[] }>('/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, conversationHistory }),
+    }),
 
   // Business Profile Updates
   updateBusinessProfile: (type: string, id: number | string, data: any) => request<{ success: boolean; message: string }>(`/business/${type}/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

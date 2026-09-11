@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { TRIP_TRANSLATIONS } from './tripTranslations';
 
 export type LanguageCode = 'en' | 'hi' | 'hr' | 'pa' | 'mr' | 'bn' | 'ta' | 'te' | 'gu';
 
@@ -26,7 +27,7 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     // Brand & Greeting
     appName: 'TravelSaathi AI',
     tagline: 'Your Smart Travel Companion Across India',
-    builtInHaryana: 'Built in Haryana, Designed for India',
+    builtInHaryana: 'Smart AI Travel Companion for India',
     bharatKiKhoj: 'Bharat Ki Khoj Ab Aur Aasaan',
     namasteGreeting: 'Namaste!',
     whereToGoToday: 'Where do you want to go today?',
@@ -53,7 +54,7 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
 
     // Planner Labels (Reference screen 3)
     whereDoYouWantToGo: 'Where do you want to go?',
-    whereDoYouWantToGoDesc: 'e.g. Haryana, Himachal Pradesh, Rajasthan, Kerala...',
+    whereDoYouWantToGoDesc: 'e.g. Rajasthan, Himachal Pradesh, Kerala, Goa...',
     budgetLabel: 'Tera budget kitna se?',
     budgetSub: 'Select budget range',
     interestsLabel: 'Tanne ke pasand se?',
@@ -75,10 +76,10 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     heritage: 'Heritage',
 
     // Experience Card items
-    foodTourTitle: 'Traditional Haryanvi Food Tour',
-    foodTourDesc: 'Taste desi food in local dhabas with makhan & lassi',
+    foodTourTitle: 'Traditional Food & Dhaba Trail',
+    foodTourDesc: 'Taste authentic desi food in iconic local dhabas',
     folkShowTitle: 'Folk Dance & Music Show',
-    folkShowDesc: 'Feel the rhythm of Haryana & Rajasthan',
+    folkShowDesc: 'Feel the vibrant cultural rhythm of India',
     villageHomestayTitle: 'Village Homestay & Farm Tour',
     villageHomestayDesc: 'Stay with local farming families & tractor rides',
 
@@ -98,7 +99,7 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     // Haryanvi dialect (authentic regional touch matching reference)
     appName: 'ट्रैवल साथी AI',
     tagline: 'पूरे भारत का थारा अपना स्मार्ट साथी',
-    builtInHaryana: 'हरियाणा म बण्या, सारे भारत खातर सज्या',
+    builtInHaryana: 'स्मार्ट AI साथी, सारे भारत खातर',
     bharatKiKhoj: 'भारत की खोज अब और आसान',
     namasteGreeting: 'राम-राम जी!',
     whereToGoToday: 'आज कड़े जाणा से थारे नै?',
@@ -164,7 +165,7 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
   hi: {
     appName: 'ट्रैवल साथी AI',
     tagline: 'संपूर्ण भारत में आपका स्मार्ट यात्रा साथी',
-    builtInHaryana: 'हरियाणा में निर्मित, भारत के लिए समर्पित',
+    builtInHaryana: 'भारत दर्शन हेतु स्मार्ट AI यात्रा साथी',
     bharatKiKhoj: 'भारत की खोज अब और आसान',
     namasteGreeting: 'नमस्ते!',
     whereToGoToday: 'आज आप कहाँ जाना चाहते हैं?',
@@ -627,7 +628,10 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
 interface LanguageContextType {
   language: LanguageCode;
   setLanguage: (lang: LanguageCode) => void;
-  t: (key: string) => string;
+  t: (key: string, fallback?: string) => string;
+  formatDayTitle: (dayNumber: number, title?: string) => string;
+  formatSlotTitle: (slotKey: string, defaultTitle: string) => string;
+  formatStopType: (stopType: string) => string;
   languages: LanguageOption[];
   currentLanguageOption: LanguageOption;
 }
@@ -645,13 +649,50 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem('travelsaathi_lang', lang);
   };
 
-  const t = (key: string): string => {
+  const t = (key: string, fallback?: string): string => {
+    const tripDict = TRIP_TRANSLATIONS[language];
+    if (tripDict && tripDict[key]) {
+      return tripDict[key];
+    }
     const langDict = TRANSLATIONS[language];
     if (langDict && langDict[key]) {
       return langDict[key];
     }
-    // Fallback to English
-    return TRANSLATIONS.en[key] || key;
+    // Fallbacks
+    if (TRIP_TRANSLATIONS.en && TRIP_TRANSLATIONS.en[key]) {
+      return TRIP_TRANSLATIONS.en[key];
+    }
+    if (TRANSLATIONS.en && TRANSLATIONS.en[key]) {
+      return TRANSLATIONS.en[key];
+    }
+    return fallback || key;
+  };
+
+  const formatDayTitle = (dayNumber: number, title?: string): string => {
+    const dayWord = t('dayLabel', 'Day');
+    if (!title) return `${dayWord} ${dayNumber}`;
+    return title.replace(/^Day\s+(\d+)/i, `${dayWord} $1`);
+  };
+
+  const formatSlotTitle = (slotKey: string, defaultTitle: string): string => {
+    if (slotKey === 'Morning') return t('slotMorningTitle', defaultTitle);
+    if (slotKey === 'Afternoon') return t('slotAfternoonTitle', defaultTitle);
+    if (slotKey === 'Evening') return t('slotEveningTitle', defaultTitle);
+    if (slotKey === 'Night') return t('slotNightTitle', defaultTitle);
+    return defaultTitle;
+  };
+
+  const formatStopType = (stopType: string): string => {
+    const map: Record<string, string> = {
+      BREAKFAST: t('catFood', 'Breakfast / Meal'),
+      LUNCH: t('aiLunchTitle', 'Lunch'),
+      DINNER: t('aiDinnerTitle', 'Dinner'),
+      HOTEL: t('catAccommodation', 'Hotel Stay'),
+      HIDDEN_GEM: t('hiddenGems', 'Hidden Gem'),
+      ATTRACTION: t('heritage', 'Attraction'),
+      ACTIVITY: t('catActivities', 'Activity'),
+    };
+    return map[stopType] || stopType.replace('_', ' ');
   };
 
   const currentLanguageOption = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
@@ -662,6 +703,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         language,
         setLanguage,
         t,
+        formatDayTitle,
+        formatSlotTitle,
+        formatStopType,
         languages: LANGUAGES,
         currentLanguageOption,
       }}

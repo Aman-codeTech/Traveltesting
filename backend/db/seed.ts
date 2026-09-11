@@ -250,12 +250,13 @@ export async function runSeed(force: boolean = false) {
   for (const r of RESTAURANTS_DATA) {
     const cityId = cityIds[r.cityName];
     if (!cityId) continue;
+    const foodType = (r as any).food_type || 'both';
     const restRes = dbManager.run(
       `INSERT INTO restaurants (
-        owner_id, city_id, name, description, photos_json, cuisine, popular_dishes_json,
+        owner_id, city_id, name, description, photos_json, cuisine, food_type, popular_dishes_json,
         facilities_json, opening_hours, avg_cost_for_two, rating, phone, email, website,
         approval_status, is_featured, is_published, views_count, saves_count, contact_clicks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         bizOwnerId,
         cityId,
@@ -263,6 +264,7 @@ export async function runSeed(force: boolean = false) {
         `Famous dining destination in ${r.cityName} celebrated for authentic culinary flavours and traditional ambiance.`,
         JSON.stringify(r.photos || ['https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80']),
         r.cuisine,
+        foodType,
         JSON.stringify(r.popular_dishes),
         JSON.stringify(['Air Conditioned', 'Family Seating', 'Takeaway', 'Card Payments']),
         '11:00 AM - 11:00 PM',
@@ -281,6 +283,20 @@ export async function runSeed(force: boolean = false) {
     );
 
     for (const dish of r.popular_dishes) {
+      const isMeat = dish.toLowerCase().includes('chicken') ||
+        dish.toLowerCase().includes('mutton') ||
+        dish.toLowerCase().includes('prawn') ||
+        dish.toLowerCase().includes('fish') ||
+        dish.toLowerCase().includes('meat') ||
+        dish.toLowerCase().includes('kebab') ||
+        dish.toLowerCase().includes('pork') ||
+        dish.toLowerCase().includes('trout') ||
+        dish.toLowerCase().includes('vindaloo') ||
+        dish.toLowerCase().includes('seekh') ||
+        dish.toLowerCase().includes('raan');
+
+      const isVegDish = foodType === 'veg' ? 1 : (foodType === 'non_veg' && isMeat ? 0 : (isMeat ? 0 : 1));
+
       dbManager.run(
         'INSERT INTO menu_items (restaurant_id, name, description, price, is_veg, category) VALUES (?, ?, ?, ?, ?, ?)',
         [
@@ -288,7 +304,7 @@ export async function runSeed(force: boolean = false) {
           dish,
           `Chef’s signature preparation of ${dish} with authentic herbs and spices.`,
           Math.round(r.avg_cost_for_two / 3),
-          dish.toLowerCase().includes('chicken') || dish.toLowerCase().includes('mutton') || dish.toLowerCase().includes('prawn') || dish.toLowerCase().includes('fish') ? 0 : 1,
+          isVegDish,
           'Main Course'
         ]
       );

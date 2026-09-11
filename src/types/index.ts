@@ -143,6 +143,7 @@ export interface Restaurant {
   description: string;
   photos: string[];
   cuisine: string;
+  food_type?: 'veg' | 'non_veg' | 'both';
   popular_dishes: string[];
   facilities: string[];
   opening_hours: string;
@@ -251,6 +252,7 @@ export interface BudgetBreakdown {
   budgetPercentageUsed: number;
   isExceeded: boolean;
   excessAmount: number;
+  status?: 'WITHIN_BUDGET' | 'BUDGET_FULLY_USED' | 'BUDGET_INSUFFICIENT';
   hotelCost: number;
   foodCost: number;
   transportCost: number;
@@ -269,6 +271,15 @@ export interface BudgetBreakdown {
 
 export interface GeneratedTrip {
   id?: number;
+  isBudgetSufficient?: boolean;
+  minRequiredBudget?: number;
+  shortfallAmount?: number;
+  suggestedActions?: {
+    reduceDaysTo?: number;
+    recommendedMinBudget?: number;
+    suggestBudgetHotel?: boolean;
+    suggestBudgetTransport?: boolean;
+  };
   city: {
     id: number;
     name: string;
@@ -278,12 +289,14 @@ export interface GeneratedTrip {
   };
   title: string;
   daysCount: number;
+  nightsCount?: number;
   travellersCount: number;
   adultsCount?: number;
   childrenCount?: number;
   transportMode: string;
   travellerType: string;
   interests: string[];
+  foodPreference?: 'veg' | 'non_veg';
   budget: BudgetBreakdown;
   days: GeneratedDay[];
   routeSummary: {

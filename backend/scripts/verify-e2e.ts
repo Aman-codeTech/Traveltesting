@@ -68,9 +68,16 @@ async function runE2EVerification() {
 
   // Verify Budget Breakdown
   const b = trip.budget;
+  if (b.estimatedTotalCost > b.budgetTarget) {
+    throw new Error(`Budget hard limit violation: estimated ₹${b.estimatedTotalCost} > budget ₹${b.budgetTarget}`);
+  }
+  const compSum = (b.hotelCost || 0) + (b.foodCost || 0) + (b.transportCost || 0) + (b.activitiesCost || 0) + (b.entryFeesCost || 0) + (b.taxiCost || 0) + (b.miscCost || 0);
+  if (b.estimatedTotalCost !== compSum) {
+    throw new Error(`Budget exactness violation: total ₹${b.estimatedTotalCost} != sum of components ₹${compSum}`);
+  }
   console.log('   - Budget Breakdown:');
   console.log(`     * Target: ₹${b.budgetTarget}`);
-  console.log(`     * Estimated Total: ₹${b.estimatedTotalCost}`);
+  console.log(`     * Estimated Total: ₹${b.estimatedTotalCost} (HARD LIMIT RESPECTED <= ₹${b.budgetTarget})`);
   console.log(`     * Remaining: ₹${b.remainingBudget} (${b.budgetPercentageUsed}% used)`);
   console.log(`     * Hotel: ₹${b.hotelCost}, Food: ₹${b.foodCost}, Transport: ₹${b.transportCost}`);
   console.log(`     * Fuel: ₹${trip.routeSummary?.fuelEstimate}, Tolls: ₹${trip.routeSummary?.tollEstimate}`);

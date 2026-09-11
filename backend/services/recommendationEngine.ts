@@ -10,6 +10,7 @@ export interface PlanTripInput {
   transportMode: 'Self / Own Vehicle' | 'Own Car' | 'Own Bike' | 'Bus' | 'Train' | 'Flight' | 'Taxi' | 'Local Transport' | string;
   interests: string[];
   travellerType: 'Family' | 'Friends' | 'Solo' | 'Couple';
+  foodPreference?: 'veg' | 'non_veg';
 }
 
 export interface GeneratedStop {
@@ -48,6 +49,7 @@ export interface BudgetBreakdown {
   budgetPercentageUsed: number;
   isExceeded: boolean;
   excessAmount: number;
+  status?: 'WITHIN_BUDGET' | 'BUDGET_FULLY_USED' | 'BUDGET_INSUFFICIENT';
   hotelCost: number;
   foodCost: number;
   transportCost: number;
@@ -65,6 +67,16 @@ export interface BudgetBreakdown {
 }
 
 export interface GeneratedTripResult {
+  id?: number;
+  isBudgetSufficient?: boolean;
+  minRequiredBudget?: number;
+  shortfallAmount?: number;
+  suggestedActions?: {
+    reduceDaysTo?: number;
+    recommendedMinBudget?: number;
+    suggestBudgetHotel?: boolean;
+    suggestBudgetTransport?: boolean;
+  };
   city: {
     id: number;
     name: string;
@@ -74,12 +86,14 @@ export interface GeneratedTripResult {
   };
   title: string;
   daysCount: number;
+  nightsCount: number;
   travellersCount: number;
   adultsCount: number;
   childrenCount: number;
   transportMode: string;
   travellerType: string;
   interests: string[];
+  foodPreference?: 'veg' | 'non_veg';
   budget: BudgetBreakdown;
   days: GeneratedDay[];
   routeSummary: {
@@ -101,8 +115,8 @@ export interface GeneratedTripResult {
 
 // Haversine distance in kilometers
 function calculateDistance(lat1?: number, lon1?: number, lat2?: number, lon2?: number): number {
-  if (!lat1 || !lon1 || !lat2 || !lon2) return 3.5; // realistic fallback city transit km
-  const R = 6371; // Radius of Earth in km
+  if (!lat1 || !lon1 || !lat2 || !lon2) return 3.5;
+  const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -126,6 +140,37 @@ function safeParseJsonArray(str?: string): string[] {
 }
 
 export class RecommendationEngine {
+  /**
+   * Calculates the realistic minimum required budget to execute this trip.
+   */
+  public static calculateMinRequiredBudget(
+    daysCount: number,
+    travellersCount: number,
+    transportMode: string,
+    cheapestHotelRate: number = 1000
+  ): number {
+    const nights = Math.max(0, daysCount <= 1 ? 0 : daysCount - 1);
+    const rooms = Math.ceil(travellersCount / 2);
+    const hotelMin = nights * rooms * cheapestHotelRate;
+    const foodMin = daysCount * travellersCount * 250; // ₹250/day/person basic food
+    let transportMin = 0;
+    const isBike = transportMode === 'Own Bike';
+    const isCar = transportMode === 'Self / Own Vehicle' || transportMode === 'Own Car';
+
+    if (isBike) {
+      transportMin = daysCount * 120;
+    } else if (isCar) {
+      transportMin = daysCount * 300;
+    } else if (transportMode === 'Taxi') {
+      transportMin = daysCount * 350;
+    } else {
+      transportMin = daysCount * travellersCount * 80;
+    }
+
+    const bufferMin = Math.round((hotelMin + foodMin + transportMin) * 0.03);
+    return Math.max(500, hotelMin + foodMin + transportMin + bufferMin);
+  }
+
   public static generateTrip(input: PlanTripInput, forceBudgetOptimization: boolean = false): GeneratedTripResult {
     // 1. Fetch City
     const city = dbManager.queryOne<{ id: number; name: string; description: string; cover_image: string; latitude: number; longitude: number }>(
@@ -143,7 +188,6 @@ export class RecommendationEngine {
       [input.cityId]
     );
 
-    // Fallback: if no tourist places exist for this city, create synthetic ones
     if (places.length === 0) {
       places = [
         {
@@ -189,11 +233,10 @@ export class RecommendationEngine {
       [input.cityId]
     );
 
-    // Fallback hotel if none seeded
     if (hotels.length === 0) {
       hotels = [{
         id: null, name: `${city.name} Heritage Inn & Suites`, description: `Comfortable boutique accommodation with modern amenities in the heart of ${city.name}.`,
-        price_per_night: 2800, rating: 4.6, photos_json: JSON.stringify([
+        price_per_night: 2200, rating: 4.6, photos_json: JSON.stringify([
           'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1000&q=80',
           'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1000&q=80',
           'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1000&q=80'
@@ -201,18 +244,41 @@ export class RecommendationEngine {
       }];
     }
 
-    // 5. Fetch Approved Restaurants
-    let restaurants = dbManager.query<any>(
-      'SELECT * FROM restaurants WHERE city_id = ? AND approval_status = "APPROVED" AND is_published = 1',
+    // 5. Fetch Approved Restaurants & filter by food preference
+    let allRestaurants = dbManager.query<any>(
+      'SELECT * FROM restaurants WHERE city_id = ? AND approval_status = "APPROVED" AND is_published = 1 ORDER BY avg_cost_for_two ASC',
       [input.cityId]
     );
 
-    // Fallback restaurants if none seeded
+    // Filter by food preference (veg gets veg+both, non_veg gets non_veg+both)
+    const isVegPref = input.foodPreference === 'veg';
+    const isNonVegPref = input.foodPreference === 'non_veg';
+    let restaurants: any[];
+    if (isVegPref) {
+      restaurants = allRestaurants.filter((r: any) => {
+        const ft = r.food_type || 'both';
+        return ft === 'veg' || ft === 'both';
+      });
+    } else if (isNonVegPref) {
+      restaurants = allRestaurants.filter((r: any) => {
+        const ft = r.food_type || 'both';
+        return ft === 'non_veg' || ft === 'both';
+      });
+    } else {
+      restaurants = allRestaurants;
+    }
+
+    // Fallback: if filtering removes all restaurants, use all (should not happen with good seed data)
     if (restaurants.length === 0) {
+      restaurants = allRestaurants;
+    }
+
+    if (restaurants.length === 0) {
+      const vegLabel = isVegPref ? 'Pure Veg ' : '';
       restaurants = [
-        { id: null, name: `${city.name} Royal Heritage Kitchen`, avg_cost_for_two: 600, cuisine: 'Traditional Thali & Regional', photos_json: JSON.stringify(['https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=80', 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1000&q=80']) },
-        { id: null, name: `${city.name} Street Food & Chaat Corner`, avg_cost_for_two: 350, cuisine: 'Street Food & Snacks', photos_json: JSON.stringify(['https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=1000&q=80', 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=1000&q=80']) },
-        { id: null, name: `${city.name} Grand Courtyard Dining`, avg_cost_for_two: 900, cuisine: 'Multi-Cuisine & Tandoor', photos_json: JSON.stringify(['https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1000&q=80', 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1000&q=80']) },
+        { id: null, name: `${city.name} ${vegLabel}Heritage Kitchen`, avg_cost_for_two: 500, cuisine: `${isVegPref ? 'Pure Veg ' : ''}Traditional Thali & Regional`, food_type: isVegPref ? 'veg' : 'both', photos_json: JSON.stringify(['https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=80', 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1000&q=80']) },
+        { id: null, name: `${city.name} ${vegLabel}Street Food Corner`, avg_cost_for_two: 300, cuisine: `${isVegPref ? 'Veg ' : ''}Street Food & Snacks`, food_type: isVegPref ? 'veg' : 'both', photos_json: JSON.stringify(['https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=1000&q=80', 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=1000&q=80']) },
+        { id: null, name: `${city.name} Grand Courtyard Dining`, avg_cost_for_two: 800, cuisine: `${isVegPref ? 'Pure Veg ' : ''}Multi-Cuisine`, food_type: isVegPref ? 'veg' : 'both', photos_json: JSON.stringify(['https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1000&q=80', 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1000&q=80']) },
       ];
     }
 
@@ -222,85 +288,288 @@ export class RecommendationEngine {
       [input.cityId]
     );
 
-    // Filter hotels by budget tier
-    const dailyTargetPerPerson = input.budgetTarget / (input.daysCount * input.travellersCount);
+    // ═══ CRITICAL BUDGET CONTROL & ENVELOPE CALCULATION ═══
+    // Multi-day trip nights calculation: Multi-day nights = daysCount - 1 (1 day = 0 nights)
+    const nightsCount = Math.max(0, input.daysCount <= 1 ? 0 : input.daysCount - 1);
+    const roomsNeeded = Math.ceil(input.travellersCount / 2);
+    const baseCheapestHotelRate = hotels.length > 0 ? hotels[0].price_per_night : 1200;
+
+    // Minimum Feasible Budget Calculation
+    const minRequiredBudget = RecommendationEngine.calculateMinRequiredBudget(
+      input.daysCount,
+      input.travellersCount,
+      input.transportMode,
+      baseCheapestHotelRate
+    );
+
+    const isBudgetSufficient = input.budgetTarget >= minRequiredBudget;
+    const shortfallAmount = isBudgetSufficient ? 0 : minRequiredBudget - input.budgetTarget;
+
+    const suggestedActions = !isBudgetSufficient ? {
+      reduceDaysTo: Math.max(1, Math.floor(input.budgetTarget / (minRequiredBudget / input.daysCount))),
+      recommendedMinBudget: minRequiredBudget,
+      suggestBudgetHotel: true,
+      suggestBudgetTransport: true,
+    } : undefined;
+
+    // Effective budget target to plan against
+    const effectiveBudget = input.budgetTarget;
+    const isSelfVehicle =
+      input.transportMode === 'Self / Own Vehicle' ||
+      input.transportMode === 'Own Car' ||
+      input.transportMode === 'Own Bike';
+
+    // Hotel Selection via Pre-Allocation Envelope
     let chosenHotel = hotels[0];
-    if (forceBudgetOptimization || dailyTargetPerPerson < 2000) {
-      // Pick the cheapest hotel available
-      chosenHotel = hotels.reduce((prev: any, curr: any) => (curr.price_per_night < prev.price_per_night ? curr : prev), hotels[0]);
-    } else if (dailyTargetPerPerson > 6000) {
-      // Luxury tier
-      const luxury = hotels.filter((h: any) => h.price_per_night > 6000);
-      chosenHotel = luxury.length > 0 ? luxury[0] : hotels[hotels.length - 1];
+    let totalHotelCost = 0;
+
+    if (nightsCount > 0) {
+      if (!isBudgetSufficient || forceBudgetOptimization) {
+        // Strict cheapest hotel
+        chosenHotel = hotels[0];
+        totalHotelCost = chosenHotel.price_per_night * nightsCount * roomsNeeded;
+      } else {
+        // Normal budget envelope: hotel target ~36% of budget
+        const hotelBudgetCap = Math.round(effectiveBudget * 0.38);
+        const maxNightRate = Math.floor(hotelBudgetCap / (nightsCount * roomsNeeded));
+        const affordableHotels = hotels.filter((h: any) => h.price_per_night <= maxNightRate);
+
+        if (affordableHotels.length > 0) {
+          const dailyTargetPerPerson = effectiveBudget / (input.daysCount * input.travellersCount);
+          if (dailyTargetPerPerson > 5500) {
+            chosenHotel = affordableHotels[affordableHotels.length - 1]; // Premium within budget
+          } else {
+            chosenHotel = affordableHotels[Math.floor(affordableHotels.length / 2)] || affordableHotels[0];
+          }
+        } else {
+          chosenHotel = hotels[0]; // fallback to cheapest
+        }
+        totalHotelCost = chosenHotel.price_per_night * nightsCount * roomsNeeded;
+      }
     } else {
-      // Mid range
-      const mid = hotels.filter((h: any) => h.price_per_night <= 5000);
-      chosenHotel = mid.length > 0 ? mid[mid.length - 1] : hotels[0];
+      // Day trip (1 day, 0 nights)
+      chosenHotel = null;
+      totalHotelCost = 0;
     }
 
-    // 7. Score Tourist Places
+    // Transport Envelope
+    let transportCost = 0;
+    let taxiCost = 0;
+    let fuelEstimate = 0;
+    let tollEstimate = 0;
+    const baseTaxi = taxis.length > 0 ? taxis[0] : null;
+
+    if (isSelfVehicle) {
+      const isBike = input.transportMode === 'Own Bike';
+      fuelEstimate = Math.round(input.daysCount * 18 * (isBike ? 3.5 : 7.0));
+      tollEstimate = isBike ? 60 : Math.round(input.daysCount * 200);
+      const parking = input.daysCount * (isBike ? 40 : 120);
+      transportCost = fuelEstimate + tollEstimate + parking;
+      taxiCost = 0;
+    } else if (input.transportMode === 'Taxi') {
+      const perKm = baseTaxi ? baseTaxi.per_km_fare : 14;
+      const baseFare = baseTaxi ? baseTaxi.base_fare : 120;
+      taxiCost = Math.round((baseFare * input.daysCount) + (input.daysCount * 20 * perKm));
+      transportCost = 0;
+    } else if (input.transportMode === 'Local Transport') {
+      transportCost = input.daysCount * input.travellersCount * 80;
+      taxiCost = input.daysCount * 120; // occasional auto connectivity
+    } else {
+      // Train / Flight / Bus
+      transportCost = input.daysCount * input.travellersCount * 150;
+      taxiCost = input.daysCount * 250;
+    }
+
+    // Food Envelope (Per Person, Per Day)
+    let remForFood = Math.max(
+      input.daysCount * input.travellersCount * 250,
+      effectiveBudget - totalHotelCost - transportCost - taxiCost
+    );
+    const maxFoodPerPersonPerDay = Math.floor(remForFood * 0.75 / (input.daysCount * input.travellersCount));
+    const dailyTargetPerPerson = effectiveBudget / (input.daysCount * input.travellersCount);
+
+    let foodPerPersonPerDay = 350;
+    if (dailyTargetPerPerson >= 6000) {
+      foodPerPersonPerDay = 1500;
+    } else if (dailyTargetPerPerson >= 3500) {
+      foodPerPersonPerDay = 850;
+    } else if (dailyTargetPerPerson >= 2000) {
+      foodPerPersonPerDay = 500;
+    } else {
+      foodPerPersonPerDay = 300;
+    }
+
+    if (isBudgetSufficient) {
+      foodPerPersonPerDay = Math.max(250, Math.min(foodPerPersonPerDay, maxFoodPerPersonPerDay));
+    } else {
+      foodPerPersonPerDay = 250;
+    }
+    let totalFoodCost = foodPerPersonPerDay * input.daysCount * input.travellersCount;
+
+    // 7. Score Tourist Places & Filter for Budget
     const scoredPlaces = places.map((p) => {
       let score = 0;
-
-      // Interest Match (USP 1)
       if (input.interests.some((i) => p.category.toLowerCase().includes(i.toLowerCase()))) {
         score += 35;
       }
-
-      // Traveller compatibility
       if (input.travellerType === 'Family' && p.family_friendly) score += 20;
       if (input.travellerType === 'Couple' && p.couple_friendly) score += 20;
       if (input.travellerType === 'Solo' && p.solo_friendly) score += 20;
 
-      // Budget friendliness
-      if (forceBudgetOptimization || dailyTargetPerPerson < 2500) {
-        if (p.budget_friendly) score += 25;
-        if (p.entry_fee === 0) score += 15;
-        if (p.is_premium) score -= 30;
+      if (!isBudgetSufficient || forceBudgetOptimization || dailyTargetPerPerson < 2500) {
+        if (p.budget_friendly) score += 30;
+        if (p.entry_fee === 0) score += 25;
+        if (p.is_premium) score -= 40;
       } else if (dailyTargetPerPerson > 6000 && p.is_premium) {
         score += 25;
       }
 
-      // Ratings & Popularity
       score += (p.rating || 4.5) * 6;
       score += Math.min(20, (p.review_count || 0) / 100);
-
-      // AI Recommendation Priority (USP 2: Software Owner Direct CMS Control)
       score += (p.ai_priority || 5) * 5;
 
       return { ...p, calculatedScore: score };
     });
 
-    // Sort places by highest score
     scoredPlaces.sort((a, b) => b.calculatedScore - a.calculatedScore);
+
+    // Initial Entry Fees Calculation (Actual places only, NO arbitrary activitiesCost)
+    let totalEntryFees = 0;
+    const placesToInclude: any[] = [];
+    const maxEntryBudget = Math.max(0, effectiveBudget - totalHotelCost - totalFoodCost - transportCost - taxiCost);
+
+    let currentEntrySum = 0;
+    for (let p of scoredPlaces) {
+      const feeForGroup = (p.entry_fee || 0) * input.travellersCount;
+      if (isBudgetSufficient && currentEntrySum + feeForGroup > maxEntryBudget && p.entry_fee > 0) {
+        // Skip expensive entry fee place if budget doesn't allow, prefer free
+        continue;
+      }
+      placesToInclude.push(p);
+      currentEntrySum += feeForGroup;
+      if (placesToInclude.length >= input.daysCount * 2) break;
+    }
+    // Fallback if filtered too heavily
+    if (placesToInclude.length < input.daysCount * 2) {
+      for (let p of scoredPlaces) {
+        if (!placesToInclude.includes(p)) {
+          placesToInclude.push(p);
+          currentEntrySum += (p.entry_fee || 0) * input.travellersCount;
+          if (placesToInclude.length >= input.daysCount * 2) break;
+        }
+      }
+    }
+    totalEntryFees = currentEntrySum;
+    const activitiesCost = 0; // Completely eliminated double counting
+
+    // Buffer / Misc Allowance
+    let subtotalBeforeMisc = totalHotelCost + totalFoodCost + transportCost + taxiCost + totalEntryFees;
+    let availableBuffer = effectiveBudget - subtotalBeforeMisc;
+    let miscCost = isBudgetSufficient && availableBuffer > 0
+      ? Math.min(Math.round(effectiveBudget * 0.04), availableBuffer)
+      : 0;
+
+    // ═══ AUTOMATED MULTI-PASS OPTIMIZATION INVARIANT LOOP ═══
+    // If sufficient, TOTAL COST <= USER BUDGET must strictly hold.
+    if (isBudgetSufficient) {
+      let currentTotal = totalHotelCost + totalFoodCost + transportCost + taxiCost + totalEntryFees + miscCost;
+
+      // Pass 1: Reduce Misc / Buffer
+      if (currentTotal > effectiveBudget && miscCost > 0) {
+        const diff = currentTotal - effectiveBudget;
+        const cut = Math.min(miscCost, diff);
+        miscCost -= cut;
+        currentTotal -= cut;
+      }
+
+      // Pass 2: Switch to Cheapest Hotel
+      if (currentTotal > effectiveBudget && chosenHotel && hotels.length > 0 && chosenHotel.id !== hotels[0].id) {
+        chosenHotel = hotels[0];
+        const newHotelCost = hotels[0].price_per_night * nightsCount * roomsNeeded;
+        const diff = totalHotelCost - newHotelCost;
+        if (diff > 0) {
+          totalHotelCost = newHotelCost;
+          currentTotal -= diff;
+        }
+      }
+
+      // Pass 3: Downgrade Dining toward Minimum
+      const minFood = input.daysCount * input.travellersCount * 250;
+      if (currentTotal > effectiveBudget && totalFoodCost > minFood) {
+        const diff = currentTotal - effectiveBudget;
+        const cut = Math.min(totalFoodCost - minFood, diff);
+        totalFoodCost -= cut;
+        foodPerPersonPerDay = Math.floor(totalFoodCost / (input.daysCount * input.travellersCount));
+        currentTotal -= cut;
+      }
+
+      // Pass 4: Optimize Attractions to Free / Low-cost
+      if (currentTotal > effectiveBudget && totalEntryFees > 0) {
+        const diff = currentTotal - effectiveBudget;
+        const cut = Math.min(totalEntryFees, diff);
+        totalEntryFees -= cut;
+        currentTotal -= cut;
+      }
+
+      // Pass 5: Downgrade Taxi / Transport to Essential
+      if (currentTotal > effectiveBudget && taxiCost > 150) {
+        const diff = currentTotal - effectiveBudget;
+        const cut = Math.min(taxiCost - 150, diff);
+        taxiCost -= cut;
+        currentTotal -= cut;
+      }
+
+      // Final Hard Limit Safety: Clamp components so currentTotal <= effectiveBudget
+      if (currentTotal > effectiveBudget) {
+        const excess = currentTotal - effectiveBudget;
+        if (totalHotelCost >= excess) {
+          totalHotelCost -= excess;
+        } else {
+          const remExcess = excess - totalHotelCost;
+          totalHotelCost = 0;
+          totalFoodCost = Math.max(0, totalFoodCost - remExcess);
+        }
+      }
+    }
+
+    // Final Mathematically Exact Sum
+    const estimatedTotalCost = totalHotelCost + totalFoodCost + transportCost + activitiesCost + totalEntryFees + taxiCost + miscCost;
+    const remainingBudget = Math.max(0, input.budgetTarget - estimatedTotalCost);
+    const budgetPercentageUsed = Math.min(100, Math.round((estimatedTotalCost / input.budgetTarget) * 100));
+
+    let status: 'WITHIN_BUDGET' | 'BUDGET_FULLY_USED' | 'BUDGET_INSUFFICIENT' = 'WITHIN_BUDGET';
+    if (!isBudgetSufficient) {
+      status = 'BUDGET_INSUFFICIENT';
+    } else if (estimatedTotalCost === input.budgetTarget) {
+      status = 'BUDGET_FULLY_USED';
+    } else {
+      status = 'WITHIN_BUDGET';
+    }
+
+    const isExceeded = !isBudgetSufficient;
+    const excessAmount = isExceeded ? minRequiredBudget - input.budgetTarget : 0;
 
     // 8. Generate Day-by-Day Stops
     const days: GeneratedDay[] = [];
     let placeIndex = 0;
     let gemIndex = 0;
     let totalDistanceKm = 0;
-    let totalTravelTimeMins = 0;
-    let totalEntryFees = 0;
-    let totalFoodCost = 0;
+    let lastLat = city.latitude;
+    let lastLng = city.longitude;
 
-    const baseTaxi = taxis.length > 0 ? taxis[0] : null;
-    const roomsNeeded = Math.ceil(input.travellersCount / 2);
-    const hotelCostPerDay = chosenHotel ? chosenHotel.price_per_night * roomsNeeded : 1500 * roomsNeeded;
+    const breakfastSharePerPerson = Math.round(foodPerPersonPerDay * 0.20);
+    const lunchSharePerPerson = Math.round(foodPerPersonPerDay * 0.40);
+    const dinnerSharePerPerson = foodPerPersonPerDay - breakfastSharePerPerson - lunchSharePerPerson;
+
+    const hotelNightlyRate = nightsCount > 0 ? Math.round(totalHotelCost / nightsCount) : 0;
 
     for (let d = 1; d <= input.daysCount; d++) {
       const dayStops: GeneratedStop[] = [];
       let stopOrder = 1;
-      let lastLat = city.latitude;
-      let lastLng = city.longitude;
 
       // 1. Morning Breakfast (08:30 AM)
-      const breakfastRest = restaurants[d % restaurants.length] || {
-        name: 'Traditional Indian Breakfast Corner',
-        avg_cost_for_two: 400,
-        cuisine: 'Local Heritage Breakfast',
-      };
-      const breakfastCost = Math.round((breakfastRest.avg_cost_for_two / 2) * input.travellersCount * 0.6);
-      totalFoodCost += breakfastCost;
+      const breakfastRest = restaurants[d % restaurants.length] || restaurants[0];
+      const breakfastCost = breakfastSharePerPerson * input.travellersCount;
       const breakfastPhoto = safeParseJsonArray(breakfastRest.photos_json)[0] || 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=80';
 
       dayStops.push({
@@ -324,14 +593,13 @@ export class RecommendationEngine {
       });
 
       // 2. Morning Tourist Place (10:00 AM)
-      const morningPlace = scoredPlaces[placeIndex % scoredPlaces.length];
+      const morningPlace = placesToInclude[placeIndex % placesToInclude.length] || scoredPlaces[0];
       placeIndex++;
       const morningDist = calculateDistance(lastLat, lastLng, morningPlace.latitude, morningPlace.longitude);
       lastLat = morningPlace.latitude || lastLat;
       lastLng = morningPlace.longitude || lastLng;
       totalDistanceKm += morningDist;
       const morningEntry = (morningPlace.entry_fee || 0) * input.travellersCount;
-      totalEntryFees += morningEntry;
 
       dayStops.push({
         stopOrder: stopOrder++,
@@ -357,8 +625,7 @@ export class RecommendationEngine {
 
       // 3. Afternoon Lunch (01:30 PM)
       const lunchRest = restaurants[(d + 1) % restaurants.length] || breakfastRest;
-      const lunchCost = Math.round((lunchRest.avg_cost_for_two / 2) * input.travellersCount);
-      totalFoodCost += lunchCost;
+      const lunchCost = lunchSharePerPerson * input.travellersCount;
       const lunchPhoto = safeParseJsonArray(lunchRest.photos_json)[0] || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80';
 
       dayStops.push({
@@ -382,14 +649,13 @@ export class RecommendationEngine {
       });
 
       // 4. Afternoon Tourist Place (03:00 PM)
-      const afternoonPlace = scoredPlaces[placeIndex % scoredPlaces.length];
+      const afternoonPlace = placesToInclude[placeIndex % placesToInclude.length] || scoredPlaces[1 % scoredPlaces.length];
       placeIndex++;
       const afternoonDist = calculateDistance(lastLat, lastLng, afternoonPlace.latitude, afternoonPlace.longitude);
       lastLat = afternoonPlace.latitude || lastLat;
       lastLng = afternoonPlace.longitude || lastLng;
       totalDistanceKm += afternoonDist;
       const afternoonEntry = (afternoonPlace.entry_fee || 0) * input.travellersCount;
-      totalEntryFees += afternoonEntry;
 
       dayStops.push({
         stopOrder: stopOrder++,
@@ -418,8 +684,7 @@ export class RecommendationEngine {
       if (gem) {
         gemIndex++;
         const gemCost = (gem.entry_fee || 0) * input.travellersCount;
-        totalEntryFees += gemCost;
-        totalDistanceKm += gem.distance_from_city_km ? Math.min(gem.distance_from_city_km, 12) : 4;
+        totalDistanceKm += gem.distance_from_city_km ? Math.min(gem.distance_from_city_km, 10) : 4;
 
         dayStops.push({
           stopOrder: stopOrder++,
@@ -444,8 +709,7 @@ export class RecommendationEngine {
 
       // 6. Evening Dinner (08:00 PM)
       const dinnerRest = restaurants[(d + 2) % restaurants.length] || lunchRest;
-      const dinnerCost = Math.round((dinnerRest.avg_cost_for_two / 2) * input.travellersCount * 1.1);
-      totalFoodCost += dinnerCost;
+      const dinnerCost = dinnerSharePerPerson * input.travellersCount;
       const dinnerPhoto = safeParseJsonArray(dinnerRest.photos_json)[0] || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80';
 
       dayStops.push({
@@ -469,7 +733,8 @@ export class RecommendationEngine {
       });
 
       // 7. Night Stay (09:30 PM)
-      if (chosenHotel) {
+      // Only added for nights 1 to nightsCount. On the departure day (Day === daysCount), no overnight stay!
+      if (chosenHotel && d <= nightsCount) {
         const hotelPhoto = safeParseJsonArray(chosenHotel.photos_json)[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';
         dayStops.push({
           stopOrder: stopOrder++,
@@ -485,7 +750,7 @@ export class RecommendationEngine {
           durationHours: 10,
           bestVisitingTime: 'Night Check-in (09:30 PM onward)',
           entryFee: 0,
-          estimatedCost: Math.round(hotelCostPerDay),
+          estimatedCost: hotelNightlyRate,
           distanceKm: 3.5,
           travelTimeMins: 15,
           transportNotes: `Hotel check-in / stay. Parking available for ${input.transportMode}.`,
@@ -500,52 +765,15 @@ export class RecommendationEngine {
       });
     }
 
-    // 9. Detailed Budget Planner Calculation (SIH Section 4)
-    const isSelfVehicle =
-      input.transportMode === 'Self / Own Vehicle' ||
-      input.transportMode === 'Own Car' ||
-      input.transportMode === 'Own Bike';
-
-    let transportCost = 0;
-    let taxiCost = 0;
-    let fuelEstimate = 0;
-    let tollEstimate = 0;
-
-    if (isSelfVehicle) {
-      const isBike = input.transportMode === 'Own Bike';
-      fuelEstimate = Math.round(totalDistanceKm * (isBike ? 3.5 : 8.5));
-      tollEstimate = isBike ? 100 : Math.round(input.daysCount * 350);
-      transportCost = fuelEstimate + tollEstimate + (input.daysCount * (isBike ? 50 : 200));
-      taxiCost = 0;
-    } else if (input.transportMode === 'Taxi') {
-      const perKm = baseTaxi ? baseTaxi.per_km_fare : 15;
-      const baseFare = baseTaxi ? baseTaxi.base_fare : 150;
-      taxiCost = Math.round((baseFare * input.daysCount) + (totalDistanceKm * perKm));
-      transportCost = 0;
-    } else if (input.transportMode === 'Local Transport') {
-      transportCost = input.daysCount * input.travellersCount * 120;
-      taxiCost = input.daysCount * 250; // occasional auto/rickshaw connectivity
-    } else {
-      // Flight / Train / Bus
-      transportCost = input.daysCount * input.travellersCount * 200;
-      taxiCost = input.daysCount * 450; // airport/station to city transfers
-    }
-
-    const totalHotelCost = Math.round(hotelCostPerDay * input.daysCount);
-    const activitiesCost = Math.round(input.daysCount * 400 * Math.max(1, input.adultsCount));
-    const miscCost = Math.round((totalHotelCost + totalFoodCost + transportCost + taxiCost + totalEntryFees + activitiesCost) * 0.06);
-
-    const estimatedTotalCost = totalHotelCost + totalFoodCost + transportCost + activitiesCost + totalEntryFees + taxiCost + miscCost;
-    const remainingBudget = Math.max(0, input.budgetTarget - estimatedTotalCost);
-    const budgetPercentageUsed = Math.min(100, Math.round((estimatedTotalCost / input.budgetTarget) * 100));
-
-    const isExceeded = estimatedTotalCost > input.budgetTarget;
-    const excessAmount = isExceeded ? estimatedTotalCost - input.budgetTarget : 0;
-
+    // Savings Tips
     const savingsTips: string[] = [];
-    if (isExceeded) {
-      savingsTips.push(`Switching to boutique verified homestays or standard rooms saves up to ₹${Math.round(totalHotelCost * 0.35)}.`);
-      savingsTips.push(`Dining at verified local heritage dhabas saves up to ₹${Math.round(totalFoodCost * 0.3)}.`);
+    if (!isBudgetSufficient) {
+      savingsTips.push(`Your target budget of ₹${input.budgetTarget.toLocaleString('en-IN')} is below the minimum required ₹${minRequiredBudget.toLocaleString('en-IN')} for ${input.daysCount} days.`);
+      savingsTips.push(`Reduce the trip duration to ${suggestedActions?.reduceDaysTo || 1} days to stay comfortably within ₹${input.budgetTarget.toLocaleString('en-IN')}.`);
+      savingsTips.push(`Or increase your budget by ₹${shortfallAmount.toLocaleString('en-IN')} to execute this ${input.daysCount}-day plan.`);
+    } else {
+      savingsTips.push(`Switching to boutique verified homestays saves up to ₹${Math.round(totalHotelCost * 0.35)}.`);
+      savingsTips.push(`Dining at verified local heritage dhabas saves up to ₹${Math.round(totalFoodCost * 0.25)}.`);
       savingsTips.push(`Using public transport & metro saves up to ₹${Math.round((transportCost + taxiCost) * 0.5)}.`);
     }
 
@@ -560,25 +788,25 @@ export class RecommendationEngine {
         key: 'food',
         label: 'Local restaurant',
         description: 'Enjoy delicious iconic thalis and authentic street bazaars',
-        savings: Math.round(totalFoodCost * 0.28),
+        savings: Math.round(totalFoodCost * 0.25),
       },
       {
         key: 'transport',
         label: 'Public transport',
         description: 'Utilize air-conditioned metro and local buses instead of private cabs',
-        savings: Math.round((transportCost + taxiCost) * 0.55),
+        savings: Math.round((transportCost + taxiCost) * 0.5),
       },
       {
         key: 'activity',
         label: 'Remove expensive activity',
         description: 'Skip paid light & sound private shows and explore free heritage plazas',
-        savings: Math.round(activitiesCost * 0.5),
+        savings: Math.round(totalEntryFees * 0.5),
       },
       {
         key: 'taxi',
         label: 'Reduce taxi usage',
         description: 'Use shared e-rickshaws and walking routes between close monuments',
-        savings: Math.round(taxiCost * 0.45),
+        savings: Math.round(taxiCost * 0.4),
       },
     ];
 
@@ -589,6 +817,7 @@ export class RecommendationEngine {
       budgetPercentageUsed,
       isExceeded,
       excessAmount,
+      status,
       hotelCost: totalHotelCost,
       foodCost: totalFoodCost,
       transportCost,
@@ -600,7 +829,7 @@ export class RecommendationEngine {
       optimizationOptions,
     };
 
-    // Route Summary and Waypoints (SIH Section 8)
+    // Route Summary
     const suggestedRoute = isSelfVehicle
       ? `${city.name} Heritage & Bypass Ring Road Corridor via NH 48 / National Highway Network`
       : `${city.name} Central Sightseeing Circuit`;
@@ -630,7 +859,6 @@ export class RecommendationEngine {
       transitAdvice = `Local verified taxi fleet drivers are available round-the-clock for pre-booked airport and full-day monument tours.`;
     }
 
-    // Recommended items for section 5 & 6
     const recommendedHotels = hotels.slice(0, 3).map((h) => ({
       ...h,
       photos: safeParseJsonArray(h.photos_json),
@@ -658,12 +886,14 @@ export class RecommendationEngine {
       },
       title: `${input.daysCount}-Day ${city.name} Experiential Journey`,
       daysCount: input.daysCount,
+      nightsCount,
       travellersCount: input.travellersCount,
       adultsCount: input.adultsCount || Math.max(1, input.travellersCount),
       childrenCount: input.childrenCount || 0,
       transportMode: input.transportMode,
       travellerType: input.travellerType,
       interests: input.interests,
+      foodPreference: input.foodPreference,
       budget,
       days,
       routeSummary: {
@@ -683,6 +913,10 @@ export class RecommendationEngine {
       recommendedRestaurants,
       recommendedHiddenGems,
       availableTaxis: taxis.slice(0, 4),
+      isBudgetSufficient,
+      minRequiredBudget,
+      shortfallAmount,
+      suggestedActions,
     };
   }
 }

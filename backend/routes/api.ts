@@ -93,6 +93,48 @@ router.get('/places', tourismCtrl.getPlaces);
 router.get('/places/:id', tourismCtrl.getPlaceById);
 router.get('/hidden-gems', tourismCtrl.getHiddenGems);
 
+// Global Search
+router.get('/search', async (req: Request, res: Response) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (!q) {
+      return res.json({ success: true, data: { cities: [], places: [], hotels: [], restaurants: [], hiddenGems: [] } });
+    }
+    const like = `%${q}%`;
+    const cities = dbManager.query(
+      'SELECT * FROM cities WHERE is_published = 1 AND (name LIKE ? OR description LIKE ?) LIMIT 10',
+      [like, like]
+    ).map(c => ({ ...c, categories: JSON.parse(c.categories_json || '[]') }));
+
+    const places = dbManager.query(
+      'SELECT p.*, c.name as city_name FROM tourist_places p JOIN cities c ON c.id = p.city_id WHERE p.is_published = 1 AND (p.name LIKE ? OR p.description LIKE ? OR p.category LIKE ?) LIMIT 10',
+      [like, like, like]
+    ).map(p => ({ ...p, gallery: JSON.parse(p.gallery_json || '[]') }));
+
+    const hotels = dbManager.query(
+      'SELECT h.*, c.name as city_name FROM hotels h JOIN cities c ON c.id = h.city_id WHERE h.is_published = 1 AND (h.name LIKE ? OR h.description LIKE ? OR h.address LIKE ?) LIMIT 10',
+      [like, like, like]
+    ).map(h => ({ ...h, photos: JSON.parse(h.photos_json || '[]'), facilities: JSON.parse(h.facilities_json || '[]') }));
+
+    const restaurants = dbManager.query(
+      'SELECT r.*, c.name as city_name FROM restaurants r JOIN cities c ON c.id = r.city_id WHERE r.is_published = 1 AND (r.name LIKE ? OR r.description LIKE ? OR r.cuisine LIKE ?) LIMIT 10',
+      [like, like, like]
+    ).map(r => ({ ...r, photos: JSON.parse(r.photos_json || '[]'), popular_dishes: JSON.parse(r.popular_dishes_json || '[]') }));
+
+    const hiddenGems = dbManager.query(
+      'SELECT g.*, c.name as city_name FROM hidden_gems g JOIN cities c ON c.id = g.city_id WHERE g.is_published = 1 AND (g.name LIKE ? OR g.description LIKE ?) LIMIT 10',
+      [like, like]
+    ).map(g => ({ ...g, photos: JSON.parse(g.photos_json || '[]') }));
+
+    res.json({
+      success: true,
+      data: { cities, places, hotels, restaurants, hiddenGems },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message || 'Search error' });
+  }
+});
+
 // ==================== HOTELS ====================
 router.get('/hotels', hotelCtrl.getHotels);
 router.get('/hotels/:id', hotelCtrl.getHotelById);
@@ -213,73 +255,236 @@ router.get('/search', async (req: Request, res: Response) => {
 // ==================== AI ASSISTANT CHAT ====================
 router.post('/ai/chat', async (req: Request, res: Response) => {
   try {
-    const { message } = req.body;
+    const { message, conversationHistory = [] } = req.body;
     if (!message) {
       res.status(400).json({ success: false, message: 'Message is required' });
       return;
     }
 
-    const lower = message.toLowerCase();
+    // Combine previous user messages and current prompt to maintain session state
+    const allUserTexts = [
+      ...conversationHistory
+        .filter((h: any) => h.sender === 'user' || h.role === 'user')
+        .map((h: any) => h.text || h.content || ''),
+      message,
+    ];
+    const fullConversationText = allUserTexts.join(' ').toLowerCase();
+    const currentLower = message.toLowerCase();
 
-    // Detect if user mentions a city
+    // 1. Destination Extraction: search across full history (most recent mentioned city takes priority)
     const allCities = dbManager.query<any>('SELECT id, name FROM cities WHERE is_published = 1');
-    const matchedCity = allCities.find((c) => lower.includes(c.name.toLowerCase()));
+    let matchedCity: any = null;
+    for (let i = allUserTexts.length - 1; i >= 0; i--) {
+      const txt = allUserTexts[i].toLowerCase();
+      const found = allCities.find((c: any) => txt.includes(c.name.toLowerCase()));
+      if (found) {
+        matchedCity = found;
+        break;
+      }
+    }
+
+    // 2. Budget Extraction: detect numbers with k, ₹, or budget keywords
+    let detectedBudget: number | null = null;
+    const budgetMatches = fullConversationText.match(/(?:budget\s*(?:is|of)?\s*[:=]?\s*₹?\s*|₹\s*|in\s*₹?\s*)(\d{3,7})|(\d{1,3})\s*k\b/gi);
+    if (budgetMatches) {
+      const lastMatch = budgetMatches[budgetMatches.length - 1].toLowerCase();
+      if (lastMatch.includes('k')) {
+        const num = parseFloat(lastMatch.replace(/[^0-9.]/g, ''));
+        if (!isNaN(num)) detectedBudget = num * 1000;
+      } else {
+        const num = parseInt(lastMatch.replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(num)) detectedBudget = num;
+      }
+    } else {
+      const rawNumMatches = fullConversationText.match(/\b\d{4,6}\b/g);
+      if (rawNumMatches) {
+        detectedBudget = parseInt(rawNumMatches[rawNumMatches.length - 1], 10);
+      }
+    }
+
+    // 3. Travellers Extraction:
+    let detectedTravellers: { count: number; type: string } | null = null;
+    if (fullConversationText.includes('solo')) {
+      detectedTravellers = { count: 1, type: 'Solo traveller' };
+    } else if (fullConversationText.includes('couple') || fullConversationText.includes('wife') || fullConversationText.includes('husband') || fullConversationText.includes('partner')) {
+      detectedTravellers = { count: 2, type: 'Couple' };
+    } else if (fullConversationText.includes('family')) {
+      detectedTravellers = { count: 4, type: 'Family' };
+    } else {
+      const travMatch = fullConversationText.match(/(\d+)\s*(?:people|person|traveller|travellers|pax|members|friends)/i);
+      if (travMatch) {
+        detectedTravellers = { count: parseInt(travMatch[1], 10), type: `${travMatch[1]} travellers` };
+      }
+    }
+
+    // 4. Duration Extraction:
+    let detectedDays: number | null = null;
+    const daysMatch = fullConversationText.match(/(\d+)\s*(?:days|day|nights|night)/i);
+    if (daysMatch) {
+      detectedDays = parseInt(daysMatch[1], 10);
+    } else if (fullConversationText.includes('weekend')) {
+      detectedDays = 2;
+    }
+
+    // Summary Context Header to confirm multi-turn memory
+    const contextItems: string[] = [];
+    if (matchedCity) contextItems.push(`📍 **${matchedCity.name}**`);
+    if (detectedBudget) contextItems.push(`💰 **₹${detectedBudget.toLocaleString('en-IN')}**`);
+    if (detectedTravellers) contextItems.push(`👥 **${detectedTravellers.type}**`);
+    if (detectedDays) contextItems.push(`🗓️ **${detectedDays} Days**`);
+
+    const contextHeader = contextItems.length > 0
+      ? `*(Current Session: ${contextItems.join(' • ')})*\n\n`
+      : '';
 
     let reply = '';
-    let suggestions = [
-      'Top places to visit in Jaipur',
-      'Plan a 3-day trip under ₹15,000',
-      'Best street food in Delhi',
-      'Hidden gems in Agra',
-    ];
+    let suggestions: string[] = [];
 
-    if (matchedCity) {
-      const places = dbManager.query<any>('SELECT name, category, rating, entry_fee FROM tourist_places WHERE city_id = ? AND is_published = 1 LIMIT 4', [matchedCity.id]);
-      const hotels = dbManager.query<any>('SELECT name, price_per_night, rating FROM hotels WHERE city_id = ? AND approval_status = "APPROVED" LIMIT 2', [matchedCity.id]);
-      const restaurants = dbManager.query<any>('SELECT name, cuisine, avg_cost_for_two FROM restaurants WHERE city_id = ? AND approval_status = "APPROVED" LIMIT 2', [matchedCity.id]);
-      const gems = dbManager.query<any>('SELECT name, best_time FROM hidden_gems WHERE city_id = ? AND is_published = 1 LIMIT 2', [matchedCity.id]);
+    // Response generation based on current turn intent and remembered session
+    if (currentLower.includes('hotel') || currentLower.includes('stay') || currentLower.includes('resort') || currentLower.includes('room')) {
+      if (matchedCity) {
+        const hotels = dbManager.query<any>(
+          'SELECT name, price_per_night, rating, facilities_json FROM hotels WHERE city_id = ? AND approval_status = "APPROVED" ORDER BY rating DESC LIMIT 3',
+          [matchedCity.id]
+        );
+        const nights = detectedDays || 2;
+        reply = `${contextHeader}Here are recommended hotels in **${matchedCity.name}** matching your profile:\n\n` +
+          hotels.map((h: any) => {
+            const total = h.price_per_night * nights;
+            return `🏨 **${h.name}** (⭐ ${h.rating})\n   • Price: ₹${h.price_per_night.toLocaleString('en-IN')}/night (Est. ₹${total.toLocaleString('en-IN')} for ${nights} nights)\n   • Amenities: WiFi, AC, Breakfast Included`;
+          }).join('\n\n') +
+          `\n\n💡 *All stays are verified and can be pre-selected in your itinerary.*`;
 
-      if (lower.includes('hotel') || lower.includes('stay') || lower.includes('resort')) {
-        reply = `Here are verified hotels in **${matchedCity.name}**:\n\n` +
-          hotels.map((h) => `🏨 **${h.name}** (⭐ ${h.rating}) — ₹${h.price_per_night}/night`).join('\n') +
-          `\n\n💡 *Tip: You can book these stays or customize your accommodation tier directly in the Trip Planner.*`;
-      } else if (lower.includes('food') || lower.includes('eat') || lower.includes('restaurant') || lower.includes('dish')) {
-        reply = `Here are top recommended culinary spots in **${matchedCity.name}**:\n\n` +
-          restaurants.map((r) => `🍽️ **${r.name}** — ${r.cuisine} (approx. ₹${r.avg_cost_for_two} for two)`).join('\n') +
-          `\n\nMust try authentic regional delicacies and local sweets!`;
-      } else if (lower.includes('hidden gem') || lower.includes('secret') || lower.includes('offbeat')) {
-        reply = `Here are enchanting hidden gems in **${matchedCity.name}**:\n\n` +
-          gems.map((g) => `✨ **${g.name}** — Best visited at ${g.best_time || 'Morning'}`).join('\n') +
-          `\n\nThese spots are uncrowded and preserve timeless architectural charm.`;
+        suggestions = [
+          `Now suggest restaurants in ${matchedCity.name}`,
+          `Taxi advice in ${matchedCity.name}`,
+          `Day-by-day itinerary for ${matchedCity.name}`,
+          `Hidden gems in ${matchedCity.name}`,
+        ];
       } else {
-        reply = `**${matchedCity.name}** is a splendid destination! Here are top highlights:\n\n` +
-          `🏛️ **Iconic Attractions:**\n` +
-          places.map((p) => `• **${p.name}** (${p.category}) — ₹${p.entry_fee || 'Free'} entry`).join('\n') +
-          (hotels.length > 0 ? `\n\n🏨 **Recommended Stay:** ${hotels[0].name} (₹${hotels[0].price_per_night}/night)` : '') +
-          (gems.length > 0 ? `\n\n✨ **Hidden Gem:** ${gems[0].name}` : '') +
-          `\n\nReady to explore? Click **Plan My Trip** to generate an optimized AI day-by-day itinerary!`;
+        reply = `${contextHeader}Which city would you like hotel recommendations for? We cover 16+ destinations including **Jaipur, Udaipur, Agra, Varanasi, Goa, Manali, and Srinagar**.`;
+        suggestions = ['Hotels in Jaipur', 'Hotels in Udaipur', 'Hotels in Goa', 'Hotels in Manali'];
       }
+    } else if (currentLower.includes('restaurant') || currentLower.includes('food') || currentLower.includes('eat') || currentLower.includes('dhaba') || currentLower.includes('dish')) {
+      if (matchedCity) {
+        const restaurants = dbManager.query<any>(
+          'SELECT name, cuisine, avg_cost_for_two, popular_dishes_json FROM restaurants WHERE city_id = ? AND approval_status = "APPROVED" ORDER BY rating DESC LIMIT 3',
+          [matchedCity.id]
+        );
+        const groupCount = detectedTravellers ? detectedTravellers.count : 2;
+        reply = `${contextHeader}Here are top culinary highlights in **${matchedCity.name}** for ${groupCount} travellers:\n\n` +
+          restaurants.map((r: any) => {
+            const dishes = JSON.parse(r.popular_dishes_json || '[]').slice(0, 3).join(', ');
+            const groupCost = Math.round((r.avg_cost_for_two / 2) * groupCount);
+            return `🍽️ **${r.name}** — ${r.cuisine}\n   • Must Try: ${dishes || 'Regional Thali'}\n   • Approx Cost: ₹${groupCost.toLocaleString('en-IN')} for ${groupCount} people (₹${r.avg_cost_for_two} for two)`;
+          }).join('\n\n') +
+          `\n\nMust savor authentic local flavours!`;
+
+        suggestions = [
+          `Suggest hotels in ${matchedCity.name}`,
+          `Day-by-day plan for ${matchedCity.name}`,
+          `Taxi options in ${matchedCity.name}`,
+          `Hidden gems in ${matchedCity.name}`,
+        ];
+      } else {
+        reply = `${contextHeader}Which city's cuisine would you like to explore? From Rajasthani thalis in Jaipur to Kashmiri Wazwan in Srinagar, tell me your destination!`;
+        suggestions = ['Best food in Delhi', 'Rajasthani thali in Jaipur', 'Seafood in Goa', 'Street food in Varanasi'];
+      }
+    } else if (currentLower.includes('taxi') || currentLower.includes('cab') || currentLower.includes('driver') || currentLower.includes('car')) {
+      if (matchedCity) {
+        const taxis = dbManager.query<any>(
+          'SELECT service_name, vehicle_type, base_fare, per_km_fare, rating FROM taxi_services WHERE city_id = ? AND approval_status = "APPROVED" LIMIT 2',
+          [matchedCity.id]
+        );
+        reply = `${contextHeader}Verified local taxi options in **${matchedCity.name}**:\n\n` +
+          taxis.map((t: any) => `🚕 **${t.service_name}** (${t.vehicle_type}, ⭐ ${t.rating})\n   • Base Fare: ₹${t.base_fare} • Per km: ₹${t.per_km_fare}/km\n   • Direct driver booking with 0% commission cut`).join('\n\n') +
+          `\n\n💡 *You can hail nearby cabs via GPS in our "Taxi Near Me" page!*`;
+
+        suggestions = [
+          `Hotels in ${matchedCity.name}`,
+          `Restaurants in ${matchedCity.name}`,
+          `Plan My Trip for ${matchedCity.name}`,
+        ];
+      } else {
+        reply = `${contextHeader}We have verified local taxi fleets, autos, and SUVs across all 16 destination cities. Which city are you travelling to?`;
+        suggestions = ['Taxis in Jaipur', 'Taxis in Agra', 'Taxis in Goa', 'Find Taxi Near Me (GPS)'];
+      }
+    } else if (currentLower.includes('hidden gem') || currentLower.includes('secret') || currentLower.includes('offbeat')) {
+      if (matchedCity) {
+        const gems = dbManager.query<any>(
+          'SELECT name, category, best_time, distance_from_city_km, description FROM hidden_gems WHERE city_id = ? AND is_published = 1 LIMIT 3',
+          [matchedCity.id]
+        );
+        reply = `${contextHeader}Serene offbeat gems in **${matchedCity.name}** away from regular crowds:\n\n` +
+          gems.map((g: any) => `✨ **${g.name}** (${g.category})\n   • Best Time: ${g.best_time}\n   • Distance: ${g.distance_from_city_km} km from city center\n   • ${g.description}`).join('\n\n');
+
+        suggestions = [
+          `Hotels in ${matchedCity.name}`,
+          `Food spots in ${matchedCity.name}`,
+          `Plan 3 days in ${matchedCity.name}`,
+        ];
+      } else {
+        reply = `${contextHeader}Explore India's best-kept secrets — from Chand Baori stepwells in Rajasthan to secluded Dudhsagar trails in Goa. Which state or city are you planning for?`;
+        suggestions = ['Hidden gems in Jaipur', 'Hidden gems in Agra', 'Hidden gems in Himachal'];
+      }
+    } else if (
+      // Context update turn: User specifies budget, travellers, or days after a destination
+      (detectedBudget && (currentLower.includes('budget') || currentLower.includes('rupee') || currentLower.includes('₹') || currentLower.match(/\b\d{4,6}\b/))) ||
+      (detectedTravellers && (currentLower.includes('people') || currentLower.includes('person') || currentLower.includes('solo') || currentLower.includes('couple') || currentLower.includes('family'))) ||
+      (detectedDays && (currentLower.includes('day') || currentLower.includes('days') || currentLower.includes('weekend')))
+    ) {
+      reply = `${contextHeader}Awesome, I have saved your trip preferences:\n` +
+        (matchedCity ? `• **Destination:** ${matchedCity.name}\n` : `• **Destination:** Not chosen yet\n`) +
+        (detectedBudget ? `• **Budget:** ₹${detectedBudget.toLocaleString('en-IN')}\n` : '') +
+        (detectedTravellers ? `• **Travellers:** ${detectedTravellers.type}\n` : '') +
+        (detectedDays ? `• **Duration:** ${detectedDays} Days\n` : '') +
+        `\nWhat would you like me to recommend next?`;
+
+      suggestions = matchedCity
+        ? [
+            `Suggest hotels in ${matchedCity.name}`,
+            `Recommend restaurants in ${matchedCity.name}`,
+            `Top sights in ${matchedCity.name}`,
+            `Plan My Trip now`,
+          ]
+        : [
+            'Plan trip to Jaipur',
+            'Plan trip to Udaipur',
+            'Plan trip to Goa',
+            'Plan trip to Varanasi',
+          ];
+    } else if (matchedCity) {
+      // General city overview with memory
+      const places = dbManager.query<any>(
+        'SELECT name, category, rating, entry_fee FROM tourist_places WHERE city_id = ? AND is_published = 1 ORDER BY rating DESC LIMIT 4',
+        [matchedCity.id]
+      );
+      reply = `${contextHeader}**${matchedCity.name}** is a phenomenal choice! Here is a curated itinerary overview:\n\n` +
+        `🏛️ **Top Sights & Monuments:**\n` +
+        places.map((p: any) => `• **${p.name}** (${p.category}) — ₹${p.entry_fee || 'Free'} entry (⭐ ${p.rating})`).join('\n') +
+        `\n\n💡 Next steps: You can tell me your **budget** (e.g. *"budget is 20000"*), **travellers count** (e.g. *"2 people"*), or ask for **hotels** and **restaurants**!`;
 
       suggestions = [
-        `Hotels in ${matchedCity.name}`,
+        `My budget is ₹20,000`,
+        `We are 2 people`,
+        `Suggest hotels in ${matchedCity.name}`,
         `Best food in ${matchedCity.name}`,
-        `Hidden gems in ${matchedCity.name}`,
-        `Plan a 2-day trip to ${matchedCity.name}`,
       ];
-    } else if (lower.includes('budget') || lower.includes('cost') || lower.includes('rupee') || lower.includes('₹') || lower.includes('10000') || lower.includes('15000') || lower.includes('25000')) {
-      reply = `To plan an optimal trip within your budget:\n\n` +
-        `1. **₹5,000 – ₹10,000 (Budget):** Perfect for 2-3 days in Rishikesh, Amritsar, or Jaipur with train/bus transit and heritage dharamshalas/guesthouses.\n` +
-        `2. **₹15,000 – ₹25,000 (Mid-Range):** Ideal for a 3-4 day couple or family getaway in Udaipur, Manali, or Goa with boutique hotels and self-drive routes.\n` +
-        `3. **₹30,000+ (Premium):** Luxurious stays in palace suites, private SUV chauffeurs, and royal fine dining.\n\n` +
-        `Use our **Smart Budget Engine** in **Plan My Trip** to automatically optimize hotel, dining, and transit savings!`;
     } else {
       reply = `Namaste! 🙏 I am your **TravelSaathi AI Assistant**.\n\n` +
-        `I can help you:\n` +
-        `• Generate day-by-day itineraries across 16+ verified Indian destinations\n` +
-        `• Suggest verified hotels, culinary hotspots, and secret hidden gems\n` +
-        `• Estimate road travel, FASTag tolls, and fuel expenses for self-vehicle trips\n` +
-        `• Optimize travel budgets to prevent overspending\n\n` +
-        `Which city or experience would you like to explore today?`;
+        `I remember your destination, budget, group size, and preferences across our chat to craft the perfect journey:\n\n` +
+        `• **Monuments & Sights:** Real-time entry fees, crowd patterns, and opening hours\n` +
+        `• **Hotels & Homestays:** Curated stays within your target budget\n` +
+        `• **Culinary Hotspots:** Authentic regional dining and iconic street dhabas\n` +
+        `• **Verified Taxis:** Transparent per-km rates with zero surge pricing\n\n` +
+        `Where would you like to travel today? (e.g. *"Plan a trip to Jaipur"* or *"Goa with friends"*!)`;
+
+      suggestions = [
+        'Plan a trip to Jaipur',
+        'Plan a trip to Udaipur',
+        'Plan a trip to Goa',
+        'Plan a trip to Varanasi',
+      ];
     }
 
     res.json({ success: true, reply, suggestions });

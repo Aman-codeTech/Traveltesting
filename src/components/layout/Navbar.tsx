@@ -63,12 +63,12 @@ export const Navbar: React.FC = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#1B5E20]/15 shadow-2xs">
+    <header className="sticky top-0 z-50 bg-[#0B192C]/95 backdrop-blur-md border-b border-[#0F766E]/40 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo & Tagline */}
           <Link to="/" className="group">
-            <TravelSaathiLogo />
+            <TravelSaathiLogo variant="white" />
           </Link>
 
           {/* Desktop Navigation Links */}
@@ -82,13 +82,13 @@ export const Navbar: React.FC = () => {
                   to={link.path}
                   className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 ${
                     link.highlight
-                      ? 'bg-[#1B5E20] hover:bg-[#144818] text-white shadow-md shadow-[#1B5E20]/25 hover:scale-[1.02]'
+                      ? 'bg-gradient-to-r from-[#FF6B35] to-[#EA580C] hover:brightness-110 text-white shadow-md shadow-[#FF6B35]/30 hover:scale-[1.02]'
                       : isActive
-                      ? 'text-[#1B5E20] bg-emerald-100/70 font-bold border border-emerald-300/60'
-                      : 'text-slate-600 hover:text-[#1B5E20] hover:bg-emerald-50/50'
+                      ? 'text-[#2DD4BF] bg-[#0F766E]/50 font-bold border border-[#2DD4BF]/50'
+                      : 'text-slate-200 hover:text-[#2DD4BF] hover:bg-[#1E3E62]/50'
                   }`}
                 >
-                  {Icon && <Icon className={`w-4 h-4 ${link.highlight ? 'text-[#F9C74F]' : ''}`} />}
+                  {Icon && <Icon className={`w-4 h-4 ${link.highlight ? 'text-white' : 'text-[#2DD4BF]'}`} />}
                   <span>{link.name}</span>
                 </Link>
               );
@@ -104,7 +104,7 @@ export const Navbar: React.FC = () => {
             <Link
               to="/settings"
               title="Settings & Regional Preferences"
-              className="p-2 text-slate-500 hover:text-[#1B5E20] hover:bg-emerald-50 rounded-xl transition"
+              className="p-2 text-slate-300 hover:text-[#2DD4BF] hover:bg-[#1E3E62]/50 rounded-xl transition"
             >
               <SettingsIcon className="w-5 h-5" />
             </Link>
@@ -115,7 +115,7 @@ export const Navbar: React.FC = () => {
                 <Link
                   to="/saved"
                   title="Saved Places & Trips"
-                  className="p-2 text-slate-500 hover:text-[#1B5E20] hover:bg-emerald-50 rounded-xl transition"
+                  className="p-2 text-slate-300 hover:text-[#2DD4BF] hover:bg-[#1E3E62]/50 rounded-xl transition"
                 >
                   <BookmarkCheck className="w-5 h-5" />
                 </Link>
@@ -124,11 +124,11 @@ export const Navbar: React.FC = () => {
                 <Link
                   to="/dashboard"
                   title="Notifications"
-                  className="p-2 text-slate-500 hover:text-[#1B5E20] hover:bg-emerald-50 rounded-xl relative transition"
+                  className="p-2 text-slate-300 hover:text-[#2DD4BF] hover:bg-[#1E3E62]/50 rounded-xl relative transition"
                 >
                   <Bell className="w-5 h-5" />
                   {unreadNotifications > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#F3722C] rounded-full ring-2 ring-white"></span>
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#FF6B35] rounded-full ring-2 ring-[#0B192C]"></span>
                   )}
                 </Link>
 
@@ -136,23 +136,23 @@ export const Navbar: React.FC = () => {
                 <div className="relative">
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className="flex items-center space-x-2 p-1.5 pr-3 rounded-full border border-slate-200 hover:border-[#1B5E20]/40 bg-white hover:bg-emerald-50/40 transition shadow-2xs"
+                    className="flex items-center space-x-2 p-1.5 pr-3 rounded-full border border-[#0F766E]/50 hover:border-[#2DD4BF] bg-[#07101C] hover:bg-[#1E3E62]/40 transition shadow-xs"
                   >
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-[#1B5E20] font-bold text-sm">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#0F766E] to-[#2DD4BF] flex items-center justify-center text-white font-bold text-sm">
                       {user.name.charAt(0)}
                     </div>
-                    <span className="text-sm font-semibold text-slate-800 max-w-[110px] truncate">
+                    <span className="text-sm font-semibold text-slate-200 max-w-[110px] truncate">
                       {user.name.split(' ')[0]}
                     </span>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                   </button>
 
                   {userDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                      <div className="px-4 py-2 border-b border-slate-100">
+                    <div className="absolute right-0 mt-2 w-56 bg-[#0B192C] text-slate-100 rounded-2xl shadow-2xl border border-[#0F766E]/50 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                      <div className="px-4 py-2 border-b border-[#1E3E62]">
                         <p className="text-xs text-slate-400 font-medium">Signed in as</p>
-                        <p className="text-sm font-bold text-slate-900 truncate">{user.email}</p>
-                        <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                        <p className="text-sm font-bold text-white truncate">{user.email}</p>
+                        <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#0F766E]/40 text-[#2DD4BF] border border-[#2DD4BF]/30">
                           {user.role.replace('_', ' ')}
                         </span>
                       </div>
@@ -160,9 +160,9 @@ export const Navbar: React.FC = () => {
                       {isSuperAdmin && (
                         <Link
                           to="/admin"
-                          className="flex items-center space-x-2.5 px-4 py-2.5 text-sm font-semibold text-purple-700 hover:bg-purple-50 transition"
+                          className="flex items-center space-x-2.5 px-4 py-2.5 text-sm font-semibold text-[#2DD4BF] hover:bg-[#1E3E62]/50 transition"
                         >
-                          <Shield className="w-4 h-4 text-purple-600" />
+                          <Shield className="w-4 h-4 text-[#2DD4BF]" />
                           <span>Admin Control Panel</span>
                         </Link>
                       )}
@@ -170,42 +170,42 @@ export const Navbar: React.FC = () => {
                       {isBusinessOwner && (
                         <Link
                           to="/business/dashboard"
-                          className="flex items-center space-x-2.5 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 transition"
+                          className="flex items-center space-x-2.5 px-4 py-2.5 text-sm font-semibold text-teal-300 hover:bg-[#1E3E62]/50 transition"
                         >
-                          <Briefcase className="w-4 h-4 text-emerald-600" />
+                          <Briefcase className="w-4 h-4 text-teal-400" />
                           <span>Business Dashboard</span>
                         </Link>
                       )}
 
                       <Link
                         to="/dashboard"
-                        className="flex items-center space-x-2.5 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#1B5E20] transition"
+                        className="flex items-center space-x-2.5 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-[#1E3E62]/50 hover:text-[#2DD4BF] transition"
                       >
-                        <UserIcon className="w-4 h-4" />
+                        <UserIcon className="w-4 h-4 text-slate-400" />
                         <span>Tourist Dashboard</span>
                       </Link>
 
                       <Link
                         to="/saved"
-                        className="flex items-center space-x-2.5 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#1B5E20] transition"
+                        className="flex items-center space-x-2.5 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-[#1E3E62]/50 hover:text-[#2DD4BF] transition"
                       >
-                        <BookmarkCheck className="w-4 h-4" />
+                        <BookmarkCheck className="w-4 h-4 text-slate-400" />
                         <span>Saved Trips & Places</span>
                       </Link>
 
                       <Link
                         to="/settings"
-                        className="flex items-center space-x-2.5 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#1B5E20] transition"
+                        className="flex items-center space-x-2.5 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-[#1E3E62]/50 hover:text-[#2DD4BF] transition"
                       >
-                        <SettingsIcon className="w-4 h-4 text-slate-500" />
+                        <SettingsIcon className="w-4 h-4 text-slate-400" />
                         <span>{t('settings')} & Preferences</span>
                       </Link>
 
-                      <div className="border-t border-slate-100 my-1"></div>
+                      <div className="border-t border-[#1E3E62] my-1"></div>
 
                       <button
                         onClick={logout}
-                        className="w-full flex items-center space-x-2.5 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition text-left"
+                        className="w-full flex items-center space-x-2.5 px-4 py-2 text-sm font-semibold text-rose-400 hover:bg-rose-950/40 transition text-left"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>Sign Out</span>
@@ -218,13 +218,13 @@ export const Navbar: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Link
                   to="/login"
-                  className="px-4 py-2 text-sm font-semibold text-[#1B5E20] hover:bg-emerald-50 border border-emerald-200/70 rounded-xl transition"
+                  className="px-4 py-2 text-sm font-semibold text-[#2DD4BF] hover:bg-[#0F766E]/30 border border-[#2DD4BF]/40 rounded-xl transition"
                 >
                   Log In
                 </Link>
                 <Link
                   to="/signup"
-                  className="px-4 py-2 text-sm font-semibold text-white bg-[#1B5E20] hover:bg-[#144818] rounded-xl shadow-xs transition"
+                  className="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-[#FF6B35] to-[#EA580C] hover:brightness-110 rounded-xl shadow-md transition"
                 >
                   Sign Up
                 </Link>

@@ -4,6 +4,7 @@ import { api } from '../../services/api';
 import { City } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
 import { IndianMonumentsSkyline } from '../../components/common/IndianMonumentsSkyline';
+import { PreTripBudgetChart } from '../../components/budget/PreTripBudgetChart';
 import {
   Sparkles,
   MapPin,
@@ -83,6 +84,7 @@ export const TripPlannerPage: React.FC = () => {
   const [transportMode, setTransportMode] = useState<string>('Self / Own Vehicle');
   const [selectedInterests, setSelectedInterests] = useState<string[]>(['History', 'Food', 'Culture']);
   const [travellerType, setTravellerType] = useState<string>('Couple');
+  const [foodPreference, setFoodPreference] = useState<'veg' | 'non_veg'>('veg');
   const [stepError, setStepError] = useState<string>('');
 
   // Generating State
@@ -144,6 +146,7 @@ export const TripPlannerPage: React.FC = () => {
         transportMode,
         interests: selectedInterests,
         travellerType,
+        foodPreference,
       });
 
       clearInterval(interval);
@@ -171,27 +174,27 @@ export const TripPlannerPage: React.FC = () => {
       {/* Planner Card */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl overflow-hidden">
         {/* Wizard Header */}
-        <div className="bg-gradient-to-r from-[#1B5E20] via-[#2E7D32] to-[#154a19] p-6 sm:p-8 text-white relative">
-          <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-semibold mb-2 backdrop-blur-xs">
-            <Sparkles className="w-3.5 h-3.5 text-[#F9C74F]" />
-            <span>{t('aiAssistant')}</span>
+        <div className="bg-gradient-to-r from-[#0B192C] via-[#0F766E] to-[#0B192C] p-6 sm:p-8 text-white relative">
+          <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold mb-2 backdrop-blur-xs border border-white/10">
+            <Sparkles className="w-3.5 h-3.5 text-[#2DD4BF]" />
+            <span>{t('aiAssistant', 'AI Assistant')}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold font-heading">{t('planTrip')}</h1>
-          <p className="text-emerald-100 text-xs sm:text-sm mt-1">
-            Personalized routes, verified attractions, and real budget optimization.
+          <h1 className="text-2xl sm:text-3xl font-bold font-heading">{t('plannerTitle', 'Plan Your Trip')}</h1>
+          <p className="text-[#FAF9F6]/80 text-xs sm:text-sm mt-1">
+            {t('plannerSubtitle', 'Personalized routes, verified attractions, and real budget optimization.')}
           </p>
 
           {/* Stepper Dots */}
           <div className="flex items-center space-x-2 mt-6">
-            {[1, 2, 3, 4, 5, 6, 7].map((s) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
               <div
                 key={s}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   s === currentStep
-                    ? 'w-8 bg-[#F9C74F]'
+                    ? 'w-8 bg-[#FF6B35]'
                     : s < currentStep
-                    ? 'w-4 bg-white/70'
-                    : 'w-2 bg-white/30'
+                    ? 'w-4 bg-[#2DD4BF]'
+                    : 'w-2 bg-white/25'
                 }`}
               />
             ))}
@@ -203,12 +206,12 @@ export const TripPlannerPage: React.FC = () => {
           {isGenerating ? (
             <div className="py-16 text-center space-y-6">
               <div className="relative w-20 h-20 mx-auto">
-                <div className="w-20 h-20 border-4 border-[#1B5E20] border-t-transparent rounded-full animate-spin"></div>
-                <Sparkles className="w-8 h-8 text-[#1B5E20] absolute inset-0 m-auto animate-pulse" />
+                <div className="w-20 h-20 border-4 border-[#0F766E] border-t-transparent rounded-full animate-spin"></div>
+                <Sparkles className="w-8 h-8 text-[#FF6B35] absolute inset-0 m-auto animate-pulse" />
               </div>
               <div className="space-y-2 max-w-sm mx-auto">
-                <h3 className="text-xl font-bold text-slate-900 font-heading">Building Your Indian Odyssey</h3>
-                <p className="text-xs font-medium text-[#1B5E20] h-6 transition-all duration-200">{genPhase}</p>
+                <h3 className="text-xl font-bold text-[#0B192C] font-heading">{t('buildingOdysseyTitle', 'Building Your Indian Odyssey')}</h3>
+                <p className="text-xs font-medium text-[#0F766E] h-6 transition-all duration-200">{genPhase}</p>
                 <p className="text-[11px] text-slate-400">Balancing tourist places, meal stops, hidden gems & transport...</p>
               </div>
             </div>
@@ -218,18 +221,18 @@ export const TripPlannerPage: React.FC = () => {
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 font-heading">Where do you want to travel?</h3>
-                    <p className="text-xs text-slate-500">Search or choose from India’s top tourist cities.</p>
+                    <h3 className="text-lg font-bold text-[#0B192C] font-heading">{t('chooseDestination', 'Where do you want to travel?')}</h3>
+                    <p className="text-xs text-slate-500">{t('chooseDestinationSub', "Search or choose from India's top tourist cities.")}</p>
                   </div>
 
                   <div className="relative">
-                    <MapPin className="w-4 h-4 absolute left-3.5 top-3.5 text-[#1B5E20]" />
+                    <MapPin className="w-4 h-4 absolute left-3.5 top-3.5 text-[#0F766E]" />
                     <input
                       type="text"
-                      placeholder="Search destination city (e.g. Delhi, Jaipur, Goa, Manali, Varanasi)..."
+                      placeholder={t('searchDestinationPlaceholder', 'Search destination city (e.g. Delhi, Jaipur, Goa, Manali, Varanasi)...')}
                       value={citySearch}
                       onChange={(e) => setCitySearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-hidden focus:ring-2 focus:ring-[#1B5E20]/20 focus:border-[#1B5E20] font-medium"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-hidden focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] font-medium"
                     />
                   </div>
 
@@ -241,25 +244,25 @@ export const TripPlannerPage: React.FC = () => {
                         onClick={() => setSelectedCityId(c.id)}
                         className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
                           selectedCityId === c.id
-                            ? 'bg-emerald-50 border-[#1B5E20] ring-2 ring-[#1B5E20]/20 shadow-xs'
-                            : 'bg-white border-slate-200 hover:border-[#1B5E20]/40 hover:bg-slate-50'
+                            ? 'bg-[#0F766E]/10 border-[#0F766E] ring-2 ring-[#0F766E]/20 shadow-xs'
+                            : 'bg-white border-slate-200 hover:border-[#2DD4BF] hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-bold text-slate-400 uppercase">{c.state_name}</span>
-                          {selectedCityId === c.id && <Check className="w-3.5 h-3.5 text-[#1B5E20]" />}
+                          {selectedCityId === c.id && <Check className="w-3.5 h-3.5 text-[#0F766E]" />}
                         </div>
                         <h4 className="font-bold text-sm text-slate-900 font-heading mt-1">{c.name}</h4>
-                        <span className="text-[10px] text-[#1B5E20] mt-1 font-semibold">{c.categories?.slice(0, 2).join(', ')}</span>
+                        <span className="text-[10px] text-[#0F766E] mt-1 font-semibold">{c.categories?.slice(0, 2).join(', ')}</span>
                       </button>
                     ))}
                   </div>
 
                   {selectedCityObj && (
-                    <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center space-x-3">
+                    <div className="p-3.5 bg-[#FAF9F6] rounded-2xl border border-[#2DD4BF]/30 flex items-center space-x-3">
                       <img src={selectedCityObj.cover_image} alt={selectedCityObj.name} className="w-12 h-12 rounded-xl object-cover" />
                       <div>
-                        <span className="text-xs text-[#1B5E20] font-bold">Selected Destination:</span>
+                        <span className="text-xs text-[#0F766E] font-bold">{t('selectedDestinationLabel', 'Selected Destination:')}</span>
                         <h5 className="text-sm font-bold text-slate-900">{selectedCityObj.name}, {selectedCityObj.state_name}</h5>
                       </div>
                     </div>
@@ -271,8 +274,8 @@ export const TripPlannerPage: React.FC = () => {
               {currentStep === 2 && (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 font-heading">What is your total trip budget?</h3>
-                    <p className="text-xs text-slate-500">Includes stay, meals, local transport/taxi, and entry fees.</p>
+                    <h3 className="text-lg font-bold text-[#0B192C] font-heading">{t('tripBudgetTitle', 'What is your total trip budget?')}</h3>
+                    <p className="text-xs text-slate-500">{t('tripBudgetSub', 'Includes stay, meals, local transport/taxi, and entry fees.')}</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -286,21 +289,21 @@ export const TripPlannerPage: React.FC = () => {
                         }}
                         className={`p-4 rounded-2xl border text-left transition flex items-center justify-between ${
                           budgetTarget === b.value && !customBudget
-                            ? 'bg-emerald-50 border-[#1B5E20] ring-2 ring-[#1B5E20]/20'
-                            : 'bg-white border-slate-200 hover:border-emerald-200'
+                            ? 'bg-[#0F766E]/10 border-[#0F766E] ring-2 ring-[#0F766E]/20'
+                            : 'bg-white border-slate-200 hover:border-[#2DD4BF]'
                         }`}
                       >
                         <div>
                           <span className="text-lg font-bold text-slate-900 font-heading">{b.label}</span>
                           <p className="text-xs text-slate-500">{b.desc}</p>
                         </div>
-                        {budgetTarget === b.value && !customBudget && <CheckCircle2 className="w-5 h-5 text-[#1B5E20]" />}
+                        {budgetTarget === b.value && !customBudget && <CheckCircle2 className="w-5 h-5 text-[#0F766E]" />}
                       </button>
                     ))}
                   </div>
 
                   <div className="pt-2">
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Or Enter Custom Budget (₹ INR)</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">{t('enterCustomBudget', 'Or Enter Custom Budget (₹ INR)')}</label>
                     <input
                       type="number"
                       placeholder="e.g. 35000"
@@ -309,7 +312,18 @@ export const TripPlannerPage: React.FC = () => {
                         setCustomBudget(e.target.value);
                         setBudgetTarget(Number(e.target.value) || 25000);
                       }}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:outline-hidden focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:outline-hidden focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/20"
+                    />
+                  </div>
+
+                  {/* Live Compact Budget Chart Preview */}
+                  <div className="pt-2">
+                    <PreTripBudgetChart
+                      budgetTarget={customBudget ? Number(customBudget) : budgetTarget}
+                      daysCount={daysCount}
+                      travellersCount={adultsCount + childrenCount}
+                      transportMode={transportMode}
+                      compact={true}
                     />
                   </div>
                 </div>
@@ -319,8 +333,8 @@ export const TripPlannerPage: React.FC = () => {
               {currentStep === 3 && (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 font-heading">How many days will you travel?</h3>
-                    <p className="text-xs text-slate-500">Choose itinerary duration.</p>
+                    <h3 className="text-lg font-bold text-[#0B192C] font-heading">{t('durationTitle', 'How many days will you travel?')}</h3>
+                    <p className="text-xs text-slate-500">{t('durationSub', 'Choose itinerary duration.')}</p>
                   </div>
 
                   <div className="grid grid-cols-4 sm:grid-cols-7 gap-2.5">
@@ -331,12 +345,12 @@ export const TripPlannerPage: React.FC = () => {
                         onClick={() => setDaysCount(d)}
                         className={`py-4 rounded-2xl border text-center transition ${
                           daysCount === d
-                            ? 'bg-[#1B5E20] text-white font-bold border-[#1B5E20] shadow-md shadow-[#1B5E20]/25'
-                            : 'bg-white border-slate-200 text-slate-800 hover:border-emerald-300 font-bold'
+                            ? 'bg-[#0F766E] text-white font-bold border-[#0F766E] shadow-md shadow-[#0F766E]/25'
+                            : 'bg-white border-slate-200 text-slate-800 hover:border-[#2DD4BF] font-bold'
                         }`}
                       >
                         <span className="text-xl block">{d}</span>
-                        <span className="text-[10px] block uppercase">{d === 1 ? 'Day' : 'Days'}</span>
+                        <span className="text-[10px] block uppercase">{d === 1 ? t('dayUnit', 'Day') : t('daysUnit', 'Days')}</span>
                       </button>
                     ))}
                   </div>
@@ -347,15 +361,15 @@ export const TripPlannerPage: React.FC = () => {
               {currentStep === 4 && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 font-heading">Who is travelling?</h3>
-                    <p className="text-xs text-slate-500">Help us calculate hotel rooms and passenger transport capacity.</p>
+                    <h3 className="text-lg font-bold text-[#0B192C] font-heading">{t('whoTravellingTitle', 'Who is travelling?')}</h3>
+                    <p className="text-xs text-slate-500">{t('whoTravellingSub', 'Help us calculate hotel rooms and passenger transport capacity.')}</p>
                   </div>
 
                   <div className="space-y-4 max-w-sm">
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
                       <div>
-                        <h4 className="font-bold text-sm text-slate-900">Adults (Age 12+)</h4>
-                        <span className="text-xs text-slate-400">Regular fare & room occupancy</span>
+                        <h4 className="font-bold text-sm text-slate-900">{t('adultsLabel', 'Adults (Age 12+)')}</h4>
+                        <span className="text-xs text-slate-400">{t('adultsSub', 'Regular fare & room occupancy')}</span>
                       </div>
                       <div className="flex items-center space-x-3">
                         <button
@@ -378,8 +392,8 @@ export const TripPlannerPage: React.FC = () => {
 
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
                       <div>
-                        <h4 className="font-bold text-sm text-slate-900">Children (Age 0-11)</h4>
-                        <span className="text-xs text-slate-400">Discounted / free attraction entry</span>
+                        <h4 className="font-bold text-sm text-slate-900">{t('childrenLabel', 'Children (Age 0-11)')}</h4>
+                        <span className="text-xs text-slate-400">{t('childrenSub', 'Discounted / free attraction entry')}</span>
                       </div>
                       <div className="flex items-center space-x-3">
                         <button
@@ -401,7 +415,7 @@ export const TripPlannerPage: React.FC = () => {
                     </div>
 
                     <div className="text-xs text-slate-500 font-semibold pt-1">
-                      Total Travellers: <span className="text-[#1B5E20] font-bold">{adultsCount + childrenCount}</span>
+                      {t('totalTravellersLabel', 'Total Travellers:')} <span className="text-[#0F766E] font-bold">{adultsCount + childrenCount}</span>
                     </div>
                   </div>
                 </div>
@@ -411,26 +425,26 @@ export const TripPlannerPage: React.FC = () => {
               {currentStep === 5 && (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 font-heading">Preferred Mode of Transport</h3>
-                    <p className="text-xs text-slate-500">We optimize transit timing, parking advice, and fuel estimates accordingly.</p>
+                    <h3 className="text-lg font-bold text-[#0B192C] font-heading">{t('transportTitle', 'Preferred Mode of Transport')}</h3>
+                    <p className="text-xs text-slate-500">{t('transportSub', 'We optimize transit timing, parking advice, and fuel estimates accordingly.')}</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {TRANSPORT_MODES.map((t) => (
+                    {TRANSPORT_MODES.map((tMode) => (
                       <button
-                        key={t.name}
+                        key={tMode.name}
                         type="button"
-                        onClick={() => setTransportMode(t.name)}
+                        onClick={() => setTransportMode(tMode.name)}
                         className={`p-4 rounded-2xl border text-left transition flex items-start space-x-3 ${
-                          transportMode === t.name
-                            ? 'bg-emerald-50 border-[#1B5E20] ring-2 ring-[#1B5E20]/20'
-                            : 'bg-white border-slate-200 hover:border-emerald-200'
+                          transportMode === tMode.name
+                            ? 'bg-[#0F766E]/10 border-[#0F766E] ring-2 ring-[#0F766E]/20'
+                            : 'bg-white border-slate-200 hover:border-[#2DD4BF]'
                         }`}
                       >
-                        <span className="text-2xl">{t.icon}</span>
+                        <span className="text-2xl">{tMode.icon}</span>
                         <div>
-                          <h4 className="font-bold text-sm text-slate-900">{t.name}</h4>
-                          <p className="text-xs text-slate-500 mt-0.5">{t.desc}</p>
+                          <h4 className="font-bold text-sm text-slate-900">{tMode.name}</h4>
+                          <p className="text-xs text-slate-500 mt-0.5">{tMode.desc}</p>
                         </div>
                       </button>
                     ))}
@@ -442,8 +456,8 @@ export const TripPlannerPage: React.FC = () => {
               {currentStep === 6 && (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 font-heading">What are you interested in experiencing?</h3>
-                    <p className="text-xs text-slate-500">Select all that apply to guide AI destination matching.</p>
+                    <h3 className="text-lg font-bold text-[#0B192C] font-heading">{t('interestsTitle', 'What are you interested in experiencing?')}</h3>
+                    <p className="text-xs text-slate-500">{t('interestsSub', 'Select all that apply to guide AI destination matching.')}</p>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -456,15 +470,15 @@ export const TripPlannerPage: React.FC = () => {
                           onClick={() => toggleInterest(int.name)}
                           className={`p-3.5 rounded-2xl border text-left transition flex items-center justify-between ${
                             isSelected
-                              ? 'bg-emerald-50 border-[#1B5E20] ring-2 ring-[#1B5E20]/20 font-bold text-emerald-950'
-                              : 'bg-white border-slate-200 text-slate-700 hover:border-emerald-200'
+                              ? 'bg-[#0F766E]/10 border-[#0F766E] ring-2 ring-[#0F766E]/20 font-bold text-[#0B192C]'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-[#2DD4BF]'
                           }`}
                         >
                           <div className="flex items-center space-x-2">
                             <span className="text-xl">{int.icon}</span>
                             <span className="text-xs font-semibold">{int.name}</span>
                           </div>
-                          {isSelected && <Check className="w-4 h-4 text-[#1B5E20] shrink-0" />}
+                          {isSelected && <Check className="w-4 h-4 text-[#0F766E] shrink-0" />}
                         </button>
                       );
                     })}
@@ -476,8 +490,8 @@ export const TripPlannerPage: React.FC = () => {
               {currentStep === 7 && (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 font-heading">Who are you travelling with?</h3>
-                    <p className="text-xs text-slate-500">Determines attraction compatibility scoring and hotel styles.</p>
+                    <h3 className="text-lg font-bold text-[#0B192C] font-heading">{t('travelWithTitle', 'Who are you travelling with?')}</h3>
+                    <p className="text-xs text-slate-500">{t('travelWithSub', 'Determines attraction compatibility scoring and hotel styles.')}</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -488,8 +502,8 @@ export const TripPlannerPage: React.FC = () => {
                         onClick={() => setTravellerType(grp.type)}
                         className={`p-4 rounded-2xl border text-left transition flex items-start space-x-3 ${
                           travellerType === grp.type
-                            ? 'bg-emerald-50 border-[#1B5E20] ring-2 ring-[#1B5E20]/20'
-                            : 'bg-white border-slate-200 hover:border-emerald-200'
+                            ? 'bg-[#0F766E]/10 border-[#0F766E] ring-2 ring-[#0F766E]/20'
+                            : 'bg-white border-slate-200 hover:border-[#2DD4BF]'
                         }`}
                       >
                         <span className="text-2xl">{grp.icon}</span>
@@ -501,15 +515,26 @@ export const TripPlannerPage: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Summary Card Before Generating */}
+                  {/* Trip Specifications Summary */}
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5 mt-4">
-                    <span className="font-bold text-slate-800 uppercase tracking-wider text-[10px]">Trip Specifications:</span>
-                    <div className="grid grid-cols-2 gap-2 text-slate-600">
-                      <div>Destination: <span className="font-bold text-slate-900">{selectedCityObj?.name}</span></div>
-                      <div>Duration: <span className="font-bold text-slate-900">{daysCount} Days</span></div>
-                      <div>Budget Target: <span className="font-bold text-[#1B5E20]">₹{budgetTarget}</span></div>
-                      <div>Mode: <span className="font-bold text-slate-900">{transportMode}</span></div>
+                    <span className="font-bold text-[#0B192C] uppercase tracking-wider text-[10px]">{t('tripSpecifications', 'Trip Specifications:')}</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-600">
+                      <div>{t('destinationLabel', 'Destination:')} <span className="font-bold text-[#0B192C]">{selectedCityObj?.name}</span></div>
+                      <div>{t('durationLabel', 'Duration:')} <span className="font-bold text-[#0B192C]">{daysCount} {daysCount === 1 ? t('dayUnit', 'Day') : t('daysUnit', 'Days')}</span></div>
+                      <div>{t('targetBudgetLabel', 'Budget Target:')} <span className="font-bold text-[#0F766E]">₹{budgetTarget.toLocaleString('en-IN')}</span></div>
+                      <div>{t('transportModeLabel', 'Mode:')} <span className="font-bold text-[#0B192C]">{transportMode}</span></div>
                     </div>
+                  </div>
+
+                  {/* Full Interactive Pre-Trip Budget Chart before generating */}
+                  <div className="mt-4">
+                    <PreTripBudgetChart
+                      budgetTarget={customBudget ? Number(customBudget) : budgetTarget}
+                      daysCount={daysCount}
+                      travellersCount={adultsCount + childrenCount}
+                      transportMode={transportMode}
+                      compact={false}
+                    />
                   </div>
                 </div>
               )}
@@ -534,7 +559,7 @@ export const TripPlannerPage: React.FC = () => {
                     className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition flex items-center space-x-1"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    <span>Back</span>
+                    <span>{t('backBtn', 'Back')}</span>
                   </button>
                 ) : (
                   <div></div>
@@ -574,9 +599,9 @@ export const TripPlannerPage: React.FC = () => {
                       }
                       setCurrentStep(currentStep + 1);
                     }}
-                    className="px-6 py-2.5 bg-[#1B5E20] hover:bg-[#154a19] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1"
+                    className="px-6 py-2.5 bg-[#0F766E] hover:bg-[#0D5E57] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1"
                   >
-                    <span>Next Step</span>
+                    <span>{t('nextBtn', 'Next Step')}</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 ) : (
@@ -590,10 +615,10 @@ export const TripPlannerPage: React.FC = () => {
                       }
                       handleGenerate();
                     }}
-                    className="px-8 py-3 bg-gradient-to-r from-[#1B5E20] via-[#2E7D32] to-[#154a19] hover:brightness-110 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-900/25 transition flex items-center space-x-2 transform hover:scale-105"
+                    className="px-8 py-3.5 bg-gradient-to-r from-[#FF6B35] to-[#E85D26] hover:brightness-110 text-white font-bold text-sm rounded-xl shadow-lg shadow-[#FF6B35]/25 transition flex items-center space-x-2 transform hover:scale-[1.02]"
                   >
-                    <Sparkles className="w-4 h-4 text-[#F9C74F]" />
-                    <span>GENERATE MY TRIP</span>
+                    <Sparkles className="w-4 h-4 text-amber-200" />
+                    <span>{t('generateTripBtn', 'GENERATE MY TRIP')}</span>
                   </button>
                 )}
               </div>
@@ -603,8 +628,8 @@ export const TripPlannerPage: React.FC = () => {
       </div>
 
       {/* Indian Monuments Skyline Accent */}
-      <div className="mt-8 bg-white/60 rounded-2xl p-4 border border-emerald-100/80 shadow-xs">
-        <IndianMonumentsSkyline className="w-full text-emerald-800/15" tagline="Bharat Ki Khoj Ab Aur Aasaan • Built in Haryana, Designed for India" />
+      <div className="mt-8 bg-white/60 rounded-2xl p-4 border border-teal-100/80 shadow-xs">
+        <IndianMonumentsSkyline className="w-full text-[#0F766E]/20" tagline="Bharat Ki Khoj Ab Aur Aasaan • Designed for India" />
       </div>
     </div>
   );

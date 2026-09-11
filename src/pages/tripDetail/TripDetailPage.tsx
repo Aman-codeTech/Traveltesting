@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../../services/api';
-import { GeneratedTrip, GeneratedStop } from '../../types';
+import { GeneratedTrip, GeneratedStop, Hotel, Restaurant } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { TaxiBookingModal } from '../../components/booking/TaxiBookingModal';
 import { IndianMonumentsSkyline } from '../../components/common/IndianMonumentsSkyline';
 import {
@@ -24,7 +25,7 @@ import {
   Users,
   ChevronDown,
   Info,
-  Hotel,
+  Hotel as HotelIcon,
   Utensils,
   ArrowRight,
   Star,
@@ -35,18 +36,43 @@ import {
   Sunset,
   Moon,
   Navigation,
+  Search,
+  Check,
+  ShieldCheck,
+  Bed,
+  Wifi,
+  Coffee,
+  Building,
+  Filter,
 } from 'lucide-react';
 
 export const TripDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t, formatDayTitle, formatSlotTitle, formatStopType } = useLanguage();
 
   const [trip, setTrip] = useState<GeneratedTrip | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [savedTripId, setSavedTripId] = useState<number | null>(null);
+
+  // Workflow Stage: Step 1 (Hotel Selection) -> Step 2 (Full Day-by-Day Itinerary)
+  const [workflowStage, setWorkflowStage] = useState<'hotel_selection' | 'full_itinerary'>(
+    id && id !== 'preview' ? 'full_itinerary' : 'hotel_selection'
+  );
+
+  // Selected Hotel state & City Data
+  const [selectedHotel, setSelectedHotel] = useState<any | null>(null);
+  const [cityHotels, setCityHotels] = useState<Hotel[]>([]);
+  const [cityRestaurants, setCityRestaurants] = useState<Restaurant[]>([]);
+
+  // Hotel filters
+  const [hotelFilterTier, setHotelFilterTier] = useState<'ALL' | 'BUDGET' | 'MID_RANGE' | 'LUXURY'>('ALL');
+  const [hotelMinRating, setHotelMinRating] = useState<number>(0);
+  const [hotelSearchQuery, setHotelSearchQuery] = useState<string>('');
+  const [hotelAmenityFilter, setHotelAmenityFilter] = useState<string>('ALL');
 
   // Booking modal & selected taxi
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
@@ -63,6 +89,9 @@ export const TripDetailPage: React.FC = () => {
             setTrip(res.trip);
             setIsSaved(true);
             setSavedTripId(Number(id));
+            if ((res.trip as any).selectedHotel) {
+              setSelectedHotel((res.trip as any).selectedHotel);
+            }
           }
         })
         .catch((err) => console.error(err))
@@ -71,11 +100,34 @@ export const TripDetailPage: React.FC = () => {
       // Load from session storage for preview
       const stored = sessionStorage.getItem('lastGeneratedTrip');
       if (stored) {
-        setTrip(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setTrip(parsed);
+        if (parsed.selectedHotel) {
+          setSelectedHotel(parsed.selectedHotel);
+        }
       }
       setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (trip?.city?.id) {
+      // Fetch hotels for destination city
+      api.getHotels({ city_id: trip.city.id }).then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setCityHotels(res.data);
+          setSelectedHotel((prev: any) => prev || trip.recommendedHotels?.[0] || res.data[0]);
+        }
+      });
+
+      // Fetch restaurants for destination city
+      api.getRestaurants({ city_id: trip.city.id }).then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setCityRestaurants(res.data);
+        }
+      });
+    }
+  }, [trip?.city?.id]);
 
   useEffect(() => {
     if (trip) {
@@ -113,11 +165,11 @@ export const TripDetailPage: React.FC = () => {
     setAppliedOptimizations((prev) => [...prev, optKey]);
 
     const updatedBudget = { ...trip.budget };
-    if (optKey === 'hotel') updatedBudget.hotelCost = Math.max(800, (updatedBudget.hotelCost || 0) - savings);
-    if (optKey === 'food') updatedBudget.foodCost = Math.max(600, (updatedBudget.foodCost || 0) - savings);
-    if (optKey === 'transport') updatedBudget.transportCost = Math.max(200, (updatedBudget.transportCost || 0) - savings);
-    if (optKey === 'activity') updatedBudget.activitiesCost = Math.max(0, (updatedBudget.activitiesCost || 0) - savings);
-    if (optKey === 'taxi') updatedBudget.taxiCost = Math.max(0, (updatedBudget.taxiCost || 0) - savings);
+    if (optKey === 'hotel') updatedBudget.hotelCost = Math.max(0, (updatedBudget.hotelCost || 0) - savings);
+    if (optKey === 'food') updatedBudget.foodCost = Math.max(trip.daysCount * trip.travellersCount * 250, (updatedBudget.foodCost || 0) - savings);
+    if (optKey === 'transport') updatedBudget.transportCost = Math.max(100, (updatedBudget.transportCost || 0) - savings);
+    if (optKey === 'activity') updatedBudget.entryFeesCost = Math.max(0, (updatedBudget.entryFeesCost || 0) - savings);
+    if (optKey === 'taxi') updatedBudget.taxiCost = Math.max(100, (updatedBudget.taxiCost || 0) - savings);
 
     const newTotal =
       (updatedBudget.hotelCost || 0) +
@@ -133,10 +185,105 @@ export const TripDetailPage: React.FC = () => {
     updatedBudget.budgetPercentageUsed = Math.min(100, Math.round((newTotal / updatedBudget.budgetTarget) * 100));
     updatedBudget.isExceeded = newTotal > updatedBudget.budgetTarget;
     updatedBudget.excessAmount = updatedBudget.isExceeded ? newTotal - updatedBudget.budgetTarget : 0;
+    updatedBudget.status = updatedBudget.isExceeded
+      ? 'BUDGET_INSUFFICIENT'
+      : (newTotal === updatedBudget.budgetTarget ? 'BUDGET_FULLY_USED' : 'WITHIN_BUDGET');
 
     const updatedTrip = { ...trip, budget: updatedBudget };
     setTrip(updatedTrip);
     sessionStorage.setItem('lastGeneratedTrip', JSON.stringify(updatedTrip));
+  };
+
+  const handleSelectHotel = (hotel: any) => {
+    setSelectedHotel(hotel);
+  };
+
+  const handleProceedToItinerary = () => {
+    if (!trip) return;
+    const hotelToUse = selectedHotel || (cityHotels.length > 0 ? cityHotels[0] : trip.recommendedHotels?.[0]);
+    if (!hotelToUse) {
+      setWorkflowStage('full_itinerary');
+      return;
+    }
+
+    const nights = Math.max(0, trip.daysCount <= 1 ? 0 : trip.daysCount - 1);
+    const rooms = Math.ceil(trip.travellersCount / 2);
+    const totalStayPrice = nights > 0 ? (hotelToUse.price_per_night || 2200) * nights * rooms : 0;
+
+    let updatedBudget = { ...trip.budget, hotelCost: totalStayPrice };
+    let newTotal =
+      (updatedBudget.hotelCost || 0) +
+      (updatedBudget.foodCost || 0) +
+      (updatedBudget.transportCost || 0) +
+      (updatedBudget.activitiesCost || 0) +
+      (updatedBudget.entryFeesCost || 0) +
+      (updatedBudget.taxiCost || 0) +
+      (updatedBudget.miscCost || 0);
+
+    // If new hotel pushes over budget, automatically re-balance buffer and dining so total stays within budget:
+    if (newTotal > updatedBudget.budgetTarget) {
+      const excess = newTotal - updatedBudget.budgetTarget;
+      if (updatedBudget.miscCost > 0) {
+        const cut = Math.min(updatedBudget.miscCost, excess);
+        updatedBudget.miscCost -= cut;
+      }
+      newTotal =
+        (updatedBudget.hotelCost || 0) +
+        (updatedBudget.foodCost || 0) +
+        (updatedBudget.transportCost || 0) +
+        (updatedBudget.activitiesCost || 0) +
+        (updatedBudget.entryFeesCost || 0) +
+        (updatedBudget.taxiCost || 0) +
+        (updatedBudget.miscCost || 0);
+
+      const minFood = trip.daysCount * trip.travellersCount * 250;
+      if (newTotal > updatedBudget.budgetTarget && updatedBudget.foodCost > minFood) {
+        const cut = Math.min(updatedBudget.foodCost - minFood, newTotal - updatedBudget.budgetTarget);
+        updatedBudget.foodCost -= cut;
+      }
+      newTotal =
+        (updatedBudget.hotelCost || 0) +
+        (updatedBudget.foodCost || 0) +
+        (updatedBudget.transportCost || 0) +
+        (updatedBudget.activitiesCost || 0) +
+        (updatedBudget.entryFeesCost || 0) +
+        (updatedBudget.taxiCost || 0) +
+        (updatedBudget.miscCost || 0);
+    }
+
+    updatedBudget.estimatedTotalCost = newTotal;
+    updatedBudget.remainingBudget = Math.max(0, updatedBudget.budgetTarget - newTotal);
+    updatedBudget.budgetPercentageUsed = Math.min(100, Math.round((newTotal / updatedBudget.budgetTarget) * 100));
+    updatedBudget.isExceeded = newTotal > updatedBudget.budgetTarget;
+    updatedBudget.excessAmount = updatedBudget.isExceeded ? newTotal - updatedBudget.budgetTarget : 0;
+    updatedBudget.status = updatedBudget.isExceeded
+      ? 'BUDGET_INSUFFICIENT'
+      : (newTotal === updatedBudget.budgetTarget ? 'BUDGET_FULLY_USED' : 'WITHIN_BUDGET');
+
+    // Update hotel stops in itinerary
+    const updatedDays = trip.days.map((day) => ({
+      ...day,
+      stops: day.stops.map((stop) => {
+        if (stop.stopType === 'HOTEL') {
+          return {
+            ...stop,
+            title: `Overnight Stay: ${hotelToUse.name}`,
+            entityId: hotelToUse.id,
+            imageUrl: Array.isArray(hotelToUse.photos) && hotelToUse.photos.length > 0 ? hotelToUse.photos[0] : stop.imageUrl,
+            description: hotelToUse.description || stop.description,
+            estimatedCost: nights > 0 ? Math.round(totalStayPrice / nights) : 0,
+          };
+        }
+        return stop;
+      }),
+    }));
+
+    const updatedTrip = { ...trip, days: updatedDays, budget: updatedBudget, selectedHotel: hotelToUse };
+    setTrip(updatedTrip);
+    setSelectedHotel(hotelToUse);
+    sessionStorage.setItem('lastGeneratedTrip', JSON.stringify(updatedTrip));
+    setWorkflowStage('full_itinerary');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSaveTrip = async () => {
@@ -210,7 +357,7 @@ export const TripDetailPage: React.FC = () => {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-4">
-        <div className="w-12 h-12 border-4 border-[#1B5E20] border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <div className="w-12 h-12 border-4 border-[#0F766E] border-t-transparent rounded-full animate-spin mx-auto"></div>
         <p className="text-slate-500 text-sm">Retrieving personalized itinerary...</p>
       </div>
     );
@@ -222,7 +369,7 @@ export const TripDetailPage: React.FC = () => {
         <Compass className="w-16 h-16 text-slate-300 mx-auto" />
         <h2 className="text-2xl font-bold text-slate-900 font-heading">No Itinerary Found</h2>
         <p className="text-xs text-slate-500">Plan a new trip using our AI engine.</p>
-        <Link to="/plan-trip" className="inline-block px-6 py-3 bg-[#1B5E20] hover:bg-[#154a19] text-white rounded-xl text-sm font-bold">
+        <Link to="/plan-trip" className="inline-block px-6 py-3 bg-[#0F766E] hover:bg-[#0D5E57] text-white rounded-xl text-sm font-bold">
           Plan My Trip
         </Link>
       </div>
@@ -231,6 +378,177 @@ export const TripDetailPage: React.FC = () => {
 
   const { budget } = trip;
   const budgetRatio = Math.min(100, Math.round((budget.estimatedTotalCost / budget.budgetTarget) * 100));
+
+  // Curated & verified hotels for selection
+  const baseHotelsList = (cityHotels && cityHotels.length > 0)
+    ? cityHotels
+    : (trip.recommendedHotels && trip.recommendedHotels.length > 0)
+      ? trip.recommendedHotels
+      : [
+          {
+            id: 101,
+            name: `${trip.city.name} Heritage Grand Palace & Suites`,
+            city_name: trip.city.name,
+            rating: 4.8,
+            price_per_night: 3200,
+            room_type: 'Deluxe Heritage AC Room',
+            photos: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1000&q=80'],
+            facilities: ['Free High-Speed WiFi', 'Air Conditioning', 'Complimentary Breakfast', 'Swimming Pool', 'Secure Parking'],
+            description: 'Centrally located luxury heritage stay close to prime monuments, scenic avenues, and vibrant local bazaars.',
+            distance_from_center: '1.2 km from Landmark Hub',
+            ai_badge: 'AI Best Value & Location',
+            why_recommend: 'Optimal midpoint between morning heritage monuments and evening dining hubs, saving 40 mins transit daily.'
+          },
+          {
+            id: 102,
+            name: `${trip.city.name} Royal Comfort Executive Inn`,
+            city_name: trip.city.name,
+            rating: 4.6,
+            price_per_night: 2100,
+            room_type: 'Executive King Comfort Room',
+            photos: ['https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1000&q=80'],
+            facilities: ['Free High-Speed WiFi', 'Air Conditioning', 'Complimentary Breakfast', '24/7 Power Backup', 'Room Service'],
+            description: 'Top-rated comfortable property with modern amenities, round-the-clock front desk, and pristine cleanliness.',
+            distance_from_center: '2.5 km from Sightseeing Circuit',
+            ai_badge: 'Top Budget Pick',
+            why_recommend: 'Maximum amenities per rupee spent with 98% positive guest reviews on hygiene, safety, and staff hospitality.'
+          },
+          {
+            id: 103,
+            name: `${trip.city.name} Haveli Residency & Spa`,
+            city_name: trip.city.name,
+            rating: 4.9,
+            price_per_night: 5800,
+            room_type: 'Royal Luxury Suite with City View',
+            photos: ['https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1000&q=80'],
+            facilities: ['Free High-Speed WiFi', 'Air Conditioning', 'Buffet Breakfast', 'Wellness Spa', 'Valet Parking'],
+            description: 'Premium boutique property featuring traditional architecture, rooftop panoramic restaurant, and serene courtyard gardens.',
+            distance_from_center: '0.8 km from Cultural District',
+            ai_badge: 'Luxury Experience',
+            why_recommend: 'Unmatched cultural ambience, panoramic sunset views, and curated regional dining right at your doorstep.'
+          },
+          {
+            id: 104,
+            name: `${trip.city.name} Eco Green Resort & Stay`,
+            city_name: trip.city.name,
+            rating: 4.7,
+            price_per_night: 2600,
+            room_type: 'Garden View Premium Room',
+            photos: ['https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=1000&q=80'],
+            facilities: ['Free High-Speed WiFi', 'Air Conditioning', 'Organic Breakfast', 'EV Charging Station', 'Lawn & Games'],
+            description: 'Tranquil greenery and spacious lawns offering peace away from traffic yet within quick reach of main sights.',
+            distance_from_center: '3.0 km from City Center',
+            ai_badge: 'Eco Friendly Stay',
+            why_recommend: 'Spacious outdoor environment with verified on-site dining and EV charging facilities.'
+          }
+        ];
+
+  const enrichedHotels = baseHotelsList.map((hotel: any, idx: number) => {
+    const price = hotel.price_per_night || 2600;
+    const badges = ['AI Best Value', 'Top Rated Choice', 'Central Stay Base', 'Scenic Heritage Property'];
+    const reasons = [
+      `Strategically positioned within 15 minutes of Day 1 and Day 2 attractions, minimizing intra-city travel time.`,
+      `Highly reviewed for family comfort, prompt room service, and complimentary high-speed WiFi.`,
+      `Budget-optimized stay that preserves more funds for authentic dining, guided monuments, and local shopping.`,
+      `Verified hospitality partner with secure parking, 24/7 power backup, and seamless taxi pickup access.`
+    ];
+    const distances = ['1.2 km from Landmark Hub', '0.8 km from Cultural Corridor', '2.1 km from Central Bazaar', '1.5 km from City Center'];
+
+    return {
+      ...hotel,
+      price_per_night: price,
+      ai_badge: hotel.ai_badge || badges[idx % badges.length],
+      why_recommend: hotel.why_recommend || reasons[idx % reasons.length],
+      distance_from_center: hotel.distance_from_center || distances[idx % distances.length],
+      room_type: hotel.room_type || (price > 4500 ? 'Luxury Heritage Suite' : price > 2500 ? 'Deluxe AC Room' : 'Standard Comfort AC Room'),
+      facilities: (hotel.facilities && hotel.facilities.length > 0)
+        ? hotel.facilities
+        : ['Free High-Speed WiFi', 'Air Conditioning', 'Complimentary Breakfast', 'Secure Parking', 'Room Service']
+    };
+  });
+
+  const filteredHotels = enrichedHotels.filter((hotel: any) => {
+    if (hotelFilterTier === 'BUDGET' && hotel.price_per_night >= 2500) return false;
+    if (hotelFilterTier === 'MID_RANGE' && (hotel.price_per_night < 2500 || hotel.price_per_night > 5500)) return false;
+    if (hotelFilterTier === 'LUXURY' && hotel.price_per_night <= 5500) return false;
+
+    if (hotelMinRating > 0 && (hotel.rating || 4.5) < hotelMinRating) return false;
+
+    if (hotelSearchQuery.trim()) {
+      const q = hotelSearchQuery.toLowerCase();
+      const nameMatch = (hotel.name || '').toLowerCase().includes(q);
+      const descMatch = (hotel.description || '').toLowerCase().includes(q);
+      if (!nameMatch && !descMatch) return false;
+    }
+
+    if (hotelAmenityFilter !== 'ALL') {
+      const hasAmenity = (hotel.facilities || []).some((f: string) => f.toLowerCase().includes(hotelAmenityFilter.toLowerCase()));
+      if (!hasAmenity) return false;
+    }
+
+    return true;
+  });
+
+  // Active chosen hotel
+  const activeStayHotel = selectedHotel || enrichedHotels[0];
+
+  // Helper for restaurant cards per day and slot
+  const getRestaurantForSlot = (dayNumber: number, slot: 'lunch' | 'dinner') => {
+    const allDining = (cityRestaurants && cityRestaurants.length > 0)
+      ? cityRestaurants
+      : (trip.recommendedRestaurants && trip.recommendedRestaurants.length > 0)
+        ? trip.recommendedRestaurants
+        : [
+            {
+              id: 201,
+              name: `${trip.city.name} Heritage Rasoi & Thali`,
+              cuisine: 'Traditional Regional & North Indian Thali',
+              rating: 4.8,
+              avg_cost_for_two: 550,
+              photos: ['https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=80'],
+              popular_dishes: ['Special Regional Thali', 'Dal Makhani', 'Stuffed Kulcha', 'Kesar Kheer'],
+              description: 'Iconic dining spot renowned for farm-fresh ingredients, fragrant desi ghee preparations, and rapid service.'
+            },
+            {
+              id: 202,
+              name: `${trip.city.name} Grand Darbar Grill & Cuisine`,
+              cuisine: 'Mughlai, North Indian & Kebabs',
+              rating: 4.7,
+              avg_cost_for_two: 750,
+              photos: ['https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1000&q=80'],
+              popular_dishes: ['Paneer Tikka', 'Shahi Paneer / Butter Gravy', 'Garlic Naan', 'Phirni'],
+              description: 'Acclaimed family-friendly restaurant with ambient evening lightning, courtyard seating, and live instrumental tunes.'
+            },
+            {
+              id: 203,
+              name: `${trip.city.name} Organic Haveli Bhojanalaya`,
+              cuisine: 'Pure Veg Traditional & Satvik',
+              rating: 4.9,
+              avg_cost_for_two: 450,
+              photos: ['https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1000&q=80'],
+              popular_dishes: ['Bajara Khichdi', 'Desi Ghee Churma', 'Kadhi Pakora', 'Chaach'],
+              description: 'Pure vegetarian dining hub celebrating rural culinary traditions, handmade rotis, and clay-pot preparations.'
+            }
+          ];
+
+    const idx = slot === 'lunch' ? ((dayNumber - 1) * 2) % allDining.length : ((dayNumber - 1) * 2 + 1) % allDining.length;
+    const dining = allDining[idx] || allDining[0];
+    const costPerPerson = Math.round((dining.avg_cost_for_two || 600) / 2);
+    const groupCost = costPerPerson * trip.travellersCount;
+    const dishes = Array.isArray(dining.popular_dishes) && dining.popular_dishes.length > 0
+      ? dining.popular_dishes.slice(0, 4)
+      : ['Signature Thali', 'Paneer Special', 'Tandoori Roti', 'Dessert'];
+
+    const whyAI = slot === 'lunch'
+      ? `AI Lunch Pick: Perfectly situated within 8 mins of your morning sightseeing. Wholesome authentic thalis with zero detours.`
+      : `AI Dinner Pick: Relaxing ambient dining on your return corridor to ${activeStayHotel?.name || 'your stay base'}, ideal for evening unwind.`;
+
+    const photo = Array.isArray(dining.photos) && dining.photos.length > 0
+      ? dining.photos[0]
+      : 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=80';
+
+    return { dining, costPerPerson, groupCost, dishes, whyAI, photo };
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -246,15 +564,15 @@ export const TripDetailPage: React.FC = () => {
 
           <div className="absolute bottom-6 left-6 right-6 text-white space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-[#1B5E20] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs flex items-center space-x-1">
-                <Sparkles className="w-3.5 h-3.5 text-[#F9C74F]" />
+              <span className="bg-[#0F766E] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs flex items-center space-x-1">
+                <Sparkles className="w-3.5 h-3.5 text-[#2DD4BF]" />
                 <span>AI Generated Itinerary</span>
               </span>
               <span className="bg-white/20 backdrop-blur-md text-white text-xs font-semibold px-3 py-1 rounded-full">
                 {trip.city.name}
               </span>
               <span className="bg-white/20 backdrop-blur-md text-white text-xs font-semibold px-3 py-1 rounded-full">
-                {trip.daysCount} Days • {trip.travellersCount} Travellers
+                {trip.daysCount} {trip.daysCount === 1 ? t('dayUnit', 'Day') : t('daysUnit', 'Days')} • {trip.travellersCount} {trip.travellersCount === 1 ? 'Traveller' : 'Travellers'}
               </span>
             </div>
 
@@ -262,53 +580,53 @@ export const TripDetailPage: React.FC = () => {
 
             <div className="flex flex-wrap gap-4 text-xs text-slate-300 pt-1">
               <span className="flex items-center space-x-1">
-                <Car className="w-3.5 h-3.5 text-[#F9C74F]" />
-                <span>Transport: {trip.transportMode}</span>
+                <Car className="w-3.5 h-3.5 text-[#2DD4BF]" />
+                <span>{t('transportModeLabel', 'Mode:')} {trip.transportMode}</span>
               </span>
               <span className="flex items-center space-x-1">
-                <Users className="w-3.5 h-3.5 text-[#F9C74F]" />
-                <span>With: {trip.travellerType}</span>
+                <Users className="w-3.5 h-3.5 text-[#2DD4BF]" />
+                <span>{t('travelWithTitle', 'With:')} {trip.travellerType}</span>
               </span>
               <span className="flex items-center space-x-1">
-                <Compass className="w-3.5 h-3.5 text-[#F9C74F]" />
-                <span>Interests: {trip.interests.join(', ')}</span>
+                <Compass className="w-3.5 h-3.5 text-[#2DD4BF]" />
+                <span>{trip.interests.join(', ')}</span>
               </span>
             </div>
           </div>
         </div>
 
         {/* Action Header Bar */}
-        <div className="p-4 sm:p-6 bg-slate-50/70 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center space-x-2">
+        <div className="p-4 sm:p-6 bg-[#FAF9F6] border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleSaveTrip}
               disabled={isSaved}
               className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 transition ${
                 isSaved
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  : 'bg-[#1B5E20] hover:bg-[#154a19] text-white shadow-xs'
+                  ? 'bg-[#0F766E]/10 text-[#0F766E] border border-[#0F766E]/30'
+                  : 'bg-[#0F766E] hover:bg-[#0D5E57] text-white shadow-xs'
               }`}
             >
               <BookmarkCheck className="w-4 h-4" />
-              <span>{isSaved ? 'Trip Saved' : 'Save Trip to Dashboard'}</span>
+              <span>{isSaved ? t('tripSavedBadge', 'Trip Saved ✓') : t('saveTripDashboardBtn', 'Save Trip to Dashboard')}</span>
             </button>
 
             {isSaved && (
               <Link
                 to="/my-trips"
-                className="px-4 py-2.5 rounded-xl bg-[#2E7D32] hover:bg-[#1B5E20] text-white font-bold text-xs flex items-center space-x-1.5 transition shadow-xs"
+                className="px-4 py-2.5 rounded-xl bg-[#0B192C] hover:bg-[#FF6B35] text-white font-bold text-xs flex items-center space-x-1.5 transition shadow-xs"
               >
-                <span>View in My Trips</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>{t('viewInMyTripsBtn', 'View in My Trips')}</span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#2DD4BF]" />
               </Link>
             )}
 
             <Link
               to={`/plan-trip?city=${trip.city.id}`}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-white text-xs font-semibold transition flex items-center space-x-1"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-[#0F766E] text-xs font-semibold transition flex items-center space-x-1"
             >
-              <SlidersHorizontal className="w-4 h-4" />
-              <span>Modify Trip</span>
+              <SlidersHorizontal className="w-4 h-4 text-[#0F766E]" />
+              <span>{t('modifyTripBtn', 'Modify Trip')}</span>
             </Link>
 
             <button
@@ -316,81 +634,383 @@ export const TripDetailPage: React.FC = () => {
                 sessionStorage.removeItem('lastGeneratedTrip');
                 navigate('/plan-trip');
               }}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-white text-xs font-semibold transition flex items-center space-x-1"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-[#0F766E] text-xs font-semibold transition flex items-center space-x-1"
             >
-              <RotateCcw className="w-4 h-4" />
-              <span>Regenerate</span>
+              <RotateCcw className="w-4 h-4 text-[#0F766E]" />
+              <span>{t('regenerateTripBtn', 'Regenerate')}</span>
             </button>
 
             <button
               onClick={handlePrint}
               title="Print or Save as PDF"
-              className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-white text-xs font-semibold transition flex items-center space-x-1"
+              className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-[#0F766E] text-xs font-semibold transition flex items-center space-x-1"
             >
               <Printer className="w-4 h-4 text-slate-500" />
-              <span className="hidden sm:inline">Print / PDF</span>
+              <span className="hidden sm:inline">{t('printPdfBtn', 'Print / PDF')}</span>
             </button>
 
             <button
               onClick={handleShare}
               title="Share Itinerary"
-              className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-white text-xs font-semibold transition flex items-center space-x-1"
+              className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-[#0F766E] text-xs font-semibold transition flex items-center space-x-1"
             >
               <Share2 className="w-4 h-4 text-slate-500" />
-              <span className="hidden sm:inline">Share</span>
+              <span className="hidden sm:inline">{t('shareBtn', 'Share')}</span>
             </button>
           </div>
 
           <button
             onClick={handleOpenTaxiBooking}
-            className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5"
+            className="px-5 py-2.5 bg-[#FF6B35] hover:bg-[#E85D26] text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md shadow-[#FF6B35]/20"
           >
-            <Car className="w-4 h-4 text-[#F9C74F]" />
-            <span>Book Taxi for this Itinerary</span>
+            <Car className="w-4 h-4 text-amber-100" />
+            <span>{t('bookTaxiItineraryBtn', 'Book Taxi for this Itinerary')}</span>
           </button>
         </div>
       </div>
+
+      {/* ═══ HOTEL SELECTION WORKFLOW (Step 2) ═══ */}
+      {workflowStage === 'hotel_selection' && (
+        <div className="space-y-6">
+          {/* Progress Stepper */}
+          <div className="bg-[#0B192C] rounded-2xl p-5 flex flex-wrap items-center justify-center gap-0">
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-[#2DD4BF] text-[#0B192C] flex items-center justify-center font-bold text-sm">✓</div>
+              <span className="ml-2 text-sm font-bold text-[#2DD4BF] hidden sm:inline">{t('step1Preferences', 'Preferences')}</span>
+            </div>
+            <div className="w-8 sm:w-12 h-0.5 bg-[#2DD4BF] mx-2 sm:mx-3"></div>
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-[#FF6B35] text-white flex items-center justify-center font-bold text-sm animate-pulse">2</div>
+              <span className="ml-2 text-sm font-bold text-[#FF6B35]">{t('step2ChooseStay', 'Choose Your Stay')}</span>
+            </div>
+            <div className="w-8 sm:w-12 h-0.5 bg-[#0F766E]/30 mx-2 sm:mx-3"></div>
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-[#0F766E]/30 text-[#FAF9F6]/50 flex items-center justify-center font-bold text-sm">3</div>
+              <span className="ml-2 text-sm font-bold text-[#FAF9F6]/50 hidden sm:inline">{t('step3DayByDay', 'Day-by-Day Journey')}</span>
+            </div>
+          </div>
+
+          {/* Section Header */}
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#FF6B35]">Step 2 • {t('step2ChooseStay', 'Curated Accommodation')}</span>
+            <h2 className="text-2xl font-bold text-[#0B192C] font-heading">{t('recommendedHotelsTitle', 'Recommended Hotels for Your Trip to')} {trip.city.name}</h2>
+            <p className="text-xs text-slate-500 mt-0.5">{t('recommendedHotelsSubtitle', 'AI-verified stays matched to your trip duration and budget')}</p>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="bg-[#FAF9F6] p-4 rounded-2xl border border-[#2DD4BF]/20 space-y-3">
+            <div className="flex items-center space-x-2 text-xs font-bold text-[#0F766E]">
+              <Filter className="w-4 h-4" />
+              <span>{t('filterCompareHotels', 'Filter & Compare Hotels')}</span>
+            </div>
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder={t('searchHotelsPlaceholder', 'Search hotels by name or description...')}
+                value={hotelSearchQuery}
+                onChange={(e) => setHotelSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E]"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">{t('filterPriceLabel', 'Price:')}</span>
+                {([
+                  { key: 'ALL' as const, label: t('filterAll', 'All') },
+                  { key: 'BUDGET' as const, label: t('filterBudget', '< ₹2,500') },
+                  { key: 'MID_RANGE' as const, label: t('filterMidRange', '₹2,500–₹5,500') },
+                  { key: 'LUXURY' as const, label: t('filterLuxury', '> ₹5,500') },
+                ]).map((tier) => (
+                  <button key={tier.key} onClick={() => setHotelFilterTier(tier.key)} className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${hotelFilterTier === tier.key ? 'bg-[#0F766E] text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-[#0F766E]'}`}>
+                    {tier.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">{t('filterRatingLabel', 'Rating:')}</span>
+                {[{ val: 0, label: t('filterAnyRating', 'Any') }, { val: 4.0, label: '4.0+' }, { val: 4.5, label: '4.5+' }].map((r) => (
+                  <button key={r.val} onClick={() => setHotelMinRating(r.val)} className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${hotelMinRating === r.val ? 'bg-[#FF6B35] text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-[#FF6B35]'}`}>
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">{t('filterAmenityLabel', 'Amenity:')}</span>
+                {['ALL', 'WiFi', 'AC', 'Breakfast', 'Pool', 'Parking'].map((am) => (
+                  <button key={am} onClick={() => setHotelAmenityFilter(am)} className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${hotelAmenityFilter === am ? 'bg-[#2DD4BF] text-[#0B192C]' : 'bg-white border border-slate-200 text-slate-600 hover:border-[#2DD4BF]'}`}>
+                    {am === 'ALL' ? t('filterAll', 'All') : am}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Hotel Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredHotels.map((hotel: any, idx: number) => {
+              const isSelected = selectedHotel?.id === hotel.id || selectedHotel?.name === hotel.name;
+              const photo = Array.isArray(hotel.photos) && hotel.photos.length > 0 ? hotel.photos[0] : 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1000&q=80';
+              const facilities = (hotel.facilities || []).slice(0, 5);
+              const nights = trip.nightsCount !== undefined ? trip.nightsCount : Math.max(0, trip.daysCount <= 1 ? 0 : trip.daysCount - 1);
+              const rooms = Math.ceil(trip.travellersCount / 2);
+              const totalStay = nights > 0 ? (hotel.price_per_night || 2200) * nights * rooms : 0;
+              const budgetTag = hotel.price_per_night < 2500 ? 'Budget' : hotel.price_per_night <= 5500 ? 'Mid-Range' : 'Luxury';
+
+              return (
+                <div key={hotel.id || idx} className={`bg-white rounded-3xl border-2 overflow-hidden flex flex-col transition shadow-sm hover:shadow-lg ${isSelected ? 'border-[#FF6B35] ring-2 ring-[#FF6B35]/20' : 'border-slate-200 hover:border-[#2DD4BF]'}`}>
+                  <div className="relative h-52 w-full">
+                    <img src={photo} alt={hotel.name} className="w-full h-full object-cover" />
+                    <div className="absolute top-3 left-3 bg-[#0F766E] text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center space-x-1">
+                      <Sparkles className="w-3 h-3 text-[#2DD4BF]" />
+                      <span>{hotel.ai_badge || 'AI Recommended'}</span>
+                    </div>
+                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md text-slate-900 text-[11px] font-bold px-2 py-0.5 rounded-lg shadow-sm flex items-center space-x-1">
+                      <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                      <span>{hotel.rating || 4.5}</span>
+                    </div>
+                    <div className={`absolute bottom-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${budgetTag === 'Budget' ? 'bg-[#2DD4BF] text-[#0B192C]' : budgetTag === 'Mid-Range' ? 'bg-[#0F766E] text-white' : 'bg-[#FF6B35] text-white'}`}>
+                      {budgetTag}
+                    </div>
+                    <div className="absolute bottom-3 right-3 bg-[#0B192C]/85 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1 rounded-lg">
+                      ₹{(hotel.price_per_night || 2200).toLocaleString('en-IN')} / {t('perNightLabel', 'night')}
+                    </div>
+                  </div>
+
+                  <div className="p-5 space-y-3 flex-1">
+                    <div>
+                      <h3 className="font-bold text-base text-[#0B192C] font-heading">{hotel.name}</h3>
+                      <p className="text-xs text-slate-500 flex items-center space-x-1 mt-0.5">
+                        <MapPin className="w-3 h-3 text-[#0F766E]" />
+                        <span>{hotel.distance_from_center || trip.city.name}</span>
+                        <span className="text-slate-300">•</span>
+                        <span className="text-[#0F766E] font-medium">{hotel.room_type || 'Deluxe Room'}</span>
+                      </p>
+                    </div>
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{hotel.description || 'Verified boutique property with modern comforts and authentic hospitality.'}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {facilities.map((fac: string, fIdx: number) => (
+                        <span key={fIdx} className="text-[10px] bg-[#0F766E]/10 text-[#0F766E] px-2 py-0.5 rounded-md font-medium">{fac}</span>
+                      ))}
+                    </div>
+                    <div className="p-3 bg-[#FAF9F6] rounded-xl border border-[#2DD4BF]/20 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase block">{t('totalStayLabel', 'Total Stay')} ({nights} {nights === 1 ? t('dayUnit', 'night') : t('daysUnit', 'nights')})</span>
+                        <span className="text-lg font-bold text-[#0B192C] font-heading">₹{totalStay.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase block">{t('perNightLabel', 'Per Night')}</span>
+                        <span className="text-sm font-bold text-[#0F766E]">₹{(hotel.price_per_night || 2200).toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                    <div className="p-2.5 bg-[#0F766E]/5 rounded-xl border border-[#2DD4BF]/30 text-[11px] text-[#0F766E] flex items-start space-x-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#2DD4BF] shrink-0 mt-0.5" />
+                      <span>{hotel.why_recommend || 'AI-verified for optimal location, value, and comfort for your trip profile.'}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-5 pt-0 grid grid-cols-2 gap-2">
+                    <Link to={hotel.id ? `/hotels/${hotel.id}` : '/hotels'} className="py-2.5 bg-[#0F766E]/10 text-[#0F766E] hover:bg-[#0F766E] hover:text-white font-bold text-xs rounded-xl text-center flex items-center justify-center space-x-1 transition border border-[#0F766E]/20">
+                      <span>{t('viewDetailsBtn', 'View Details')}</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                    <button onClick={() => handleSelectHotel(hotel)} className={`py-2.5 font-bold text-xs rounded-xl text-center flex items-center justify-center space-x-1 transition ${isSelected ? 'bg-[#FF6B35] text-white' : 'bg-[#0B192C] hover:bg-[#FF6B35] text-white'}`}>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{isSelected ? t('selectedStayBadge', 'Selected ✓') : t('selectHotelBtn', 'Select Hotel')}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {filteredHotels.length === 0 && (
+            <div className="text-center py-12 space-y-3">
+              <Building className="w-12 h-12 text-slate-300 mx-auto" />
+              <p className="text-sm text-slate-500">No hotels match your current filters. Try adjusting your search criteria.</p>
+              <button onClick={() => { setHotelFilterTier('ALL'); setHotelMinRating(0); setHotelSearchQuery(''); setHotelAmenityFilter('ALL'); }} className="px-4 py-2 bg-[#0F766E] text-white text-xs font-bold rounded-xl">{t('filterAll', 'Reset Filters')}</button>
+            </div>
+          )}
+
+          {/* Sticky Action Bar */}
+          {selectedHotel && (
+            <div className="sticky bottom-4 z-30 bg-[#0B192C] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl border border-[#2DD4BF]/30">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-[#FF6B35] text-white flex items-center justify-center"><Bed className="w-5 h-5" /></div>
+                <div>
+                  <p className="text-sm font-bold text-white">{selectedHotel.name}</p>
+                  {(() => {
+                    const n = trip.nightsCount !== undefined ? trip.nightsCount : Math.max(0, trip.daysCount <= 1 ? 0 : trip.daysCount - 1);
+                    const rm = Math.ceil(trip.travellersCount / 2);
+                    const cost = n > 0 ? (selectedHotel.price_per_night || 2200) * n * rm : 0;
+                    return (
+                      <p className="text-xs text-[#2DD4BF]">₹{cost.toLocaleString('en-IN')} total for {n} {n === 1 ? 'night' : 'nights'} ({rm} {rm === 1 ? 'room' : 'rooms'})</p>
+                    );
+                  })()}
+                </div>
+              </div>
+              <button onClick={handleProceedToItinerary} className="px-8 py-3.5 bg-[#FF6B35] hover:bg-[#e85d2f] text-white font-bold text-sm rounded-xl shadow-lg shadow-[#FF6B35]/30 transition flex items-center space-x-2">
+                <span>{t('generateDayByDayBtn', 'Generate My Day-by-Day Trip')}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ FULL ITINERARY WORKFLOW ═══ */}
+      {workflowStage === 'full_itinerary' && (<>
+
+      {/* Selected Hotel Base Banner */}
+      {activeStayHotel && (
+        <div className="bg-[#0B192C] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 border border-[#2DD4BF]/30">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-[#0F766E] text-white flex items-center justify-center"><Bed className="w-5 h-5" /></div>
+            <div>
+              <p className="text-[10px] font-bold text-[#2DD4BF] uppercase tracking-wider">{t('yourStayBaseLabel', 'Your Stay Base')}</p>
+              <p className="text-sm font-bold text-white">{activeStayHotel.name}</p>
+              {(() => {
+                const n = trip.nightsCount !== undefined ? trip.nightsCount : Math.max(0, trip.daysCount <= 1 ? 0 : trip.daysCount - 1);
+                const rm = Math.ceil(trip.travellersCount / 2);
+                const cost = n > 0 ? (activeStayHotel.price_per_night || 2200) * n * rm : 0;
+                return (
+                  <p className="text-xs text-slate-400">₹{cost.toLocaleString('en-IN')} for {n} {n === 1 ? t('dayUnit', 'night') : t('daysUnit', 'nights')} • {activeStayHotel.room_type || 'Deluxe Room'}</p>
+                );
+              })()}
+            </div>
+          </div>
+          <button onClick={() => setWorkflowStage('hotel_selection')} className="px-5 py-2.5 bg-[#0F766E] hover:bg-[#FF6B35] text-white font-bold text-xs rounded-xl transition flex items-center space-x-1.5">
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>{t('changeHotelBtn', 'Change Hotel')}</span>
+          </button>
+        </div>
+      )}
 
       {/* SMART BUDGET PLANNER (SIH Section 4) */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#1B5E20]">Smart Budget Engine</span>
-            <h2 className="text-2xl font-bold text-slate-900 font-heading">Trip Budget Planner</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Automated cost distribution, buffer allowance &amp; savings optimizations</p>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#0F766E]">{t('smartBudgetEngineTitle', 'Smart Budget Engine')}</span>
+            <div className="flex items-center space-x-2 mt-0.5">
+              <h2 className="text-2xl font-bold text-[#0B192C] font-heading">{t('tripBudgetPlannerTitle', 'Trip Budget Planner')}</h2>
+              {budget.status === 'WITHIN_BUDGET' && (
+                <span className="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full">Within Budget ✓</span>
+              )}
+              {budget.status === 'BUDGET_FULLY_USED' && (
+                <span className="bg-teal-100 text-teal-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full">Budget Fully Used ✓</span>
+              )}
+              {budget.status === 'BUDGET_INSUFFICIENT' && (
+                <span className="bg-amber-100 text-amber-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full">Budget Insufficient ⚠️</span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">{t('budgetPlannerSubtitle', 'Automated cost distribution, buffer allowance & savings optimizations')}</p>
           </div>
 
-          {budget.isExceeded && (
+          {(budget.isExceeded || trip.isBudgetSufficient === false) && (
             <button
               onClick={handleOptimizeBudget}
               disabled={isOptimizing}
-              className="px-5 py-2.5 bg-[#F9C74F] hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition flex items-center space-x-1.5 self-start sm:self-auto"
+              className="px-5 py-2.5 bg-[#FF6B35] hover:bg-[#E85D26] text-white font-bold text-xs rounded-xl shadow-md transition flex items-center space-x-1.5 self-start sm:self-auto"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>{isOptimizing ? 'Optimizing...' : 'Auto-Optimize Trip to Fit Budget'}</span>
+              <Sparkles className="w-4 h-4 text-amber-200" />
+              <span>{isOptimizing ? t('optimizingBtn', 'Optimizing...') : t('autoOptimizeBtn', 'Auto-Optimize Trip to Fit Budget')}</span>
             </button>
           )}
         </div>
 
-        {/* Exceeded Warning Banner */}
-        {budget.isExceeded ? (
-          <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start space-x-3 text-rose-900 animate-in fade-in">
-            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-            <div className="space-y-1 text-xs">
-              <h4 className="font-bold text-sm">Your estimated trip cost exceeds your budget.</h4>
-              <p className="text-rose-700">
-                Your estimated trip cost of <strong>₹{budget.estimatedTotalCost.toLocaleString('en-IN')}</strong> exceeds your target budget of <strong>₹{budget.budgetTarget.toLocaleString('en-IN')}</strong> by ₹{budget.excessAmount.toLocaleString('en-IN')}.
-              </p>
-              <p className="text-rose-800 font-medium">Use the optimization options below to fit your trip within budget:</p>
+        {/* Insufficient Budget Alert Banner */}
+        {trip.isBudgetSufficient === false || budget.status === 'BUDGET_INSUFFICIENT' ? (
+          <div className="p-5 bg-amber-50 border-2 border-amber-300 rounded-3xl space-y-4 text-amber-950 animate-in fade-in">
+            <div className="flex items-start space-x-3">
+              <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className="font-bold text-base text-amber-900">
+                  Insufficient Budget Detected for This Itinerary
+                </h4>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  Your selected budget of <strong>₹{budget.budgetTarget.toLocaleString('en-IN')}</strong> is lower than the minimum feasible budget of <strong>₹{(trip.minRequiredBudget || budget.estimatedTotalCost).toLocaleString('en-IN')}</strong> needed for {trip.daysCount} days and {trip.travellersCount} travellers (Shortfall: <strong>₹{(trip.shortfallAmount || (budget.estimatedTotalCost - budget.budgetTarget)).toLocaleString('en-IN')}</strong>).
+                </p>
+                <p className="text-[11px] text-amber-700 font-medium">
+                  To ensure realistic quality without unexpected out-of-pocket expenses, please select an option below:
+                </p>
+              </div>
+            </div>
+
+            {/* Actionable Option Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <button
+                onClick={() => {
+                  navigate(`/plan-trip?city=${trip.city.id}&days=${trip.suggestedActions?.reduceDaysTo || 1}&budget=${budget.budgetTarget}`);
+                }}
+                className="p-3 bg-white border border-amber-300 hover:border-[#0F766E] rounded-2xl text-left transition shadow-2xs group"
+              >
+                <span className="text-xs font-bold text-slate-800 block group-hover:text-[#0F766E]">
+                  Reduce to {trip.suggestedActions?.reduceDaysTo || 1} {trip.suggestedActions?.reduceDaysTo === 1 ? 'Day' : 'Days'} →
+                </span>
+                <span className="text-[10px] text-slate-500 block mt-0.5">
+                  Fit within your ₹{budget.budgetTarget.toLocaleString('en-IN')} budget
+                </span>
+              </button>
+
+              <button
+                onClick={async () => {
+                  setIsOptimizing(true);
+                  try {
+                    const newBudget = trip.minRequiredBudget || budget.estimatedTotalCost;
+                    const res = await api.generateTrip({
+                      cityId: trip.city.id,
+                      budgetTarget: newBudget,
+                      daysCount: trip.daysCount,
+                      travellersCount: trip.travellersCount,
+                      transportMode: trip.transportMode,
+                      interests: trip.interests,
+                      travellerType: trip.travellerType as any,
+                    });
+                    if (res.success && res.trip) {
+                      setTrip(res.trip);
+                      sessionStorage.setItem('lastGeneratedTrip', JSON.stringify(res.trip));
+                    }
+                  } catch (e: any) {
+                    alert(e.message || 'Optimization failed');
+                  } finally {
+                    setIsOptimizing(false);
+                  }
+                }}
+                className="p-3 bg-[#0F766E] hover:bg-[#0D5E57] text-white rounded-2xl text-left transition shadow-2xs"
+              >
+                <span className="text-xs font-bold block">
+                  Increase Budget to ₹{(trip.minRequiredBudget || budget.estimatedTotalCost).toLocaleString('en-IN')} →
+                </span>
+                <span className="text-[10px] text-emerald-200 block mt-0.5">
+                  Keep {trip.daysCount} days with verified stays & dining
+                </span>
+              </button>
+
+              <button
+                onClick={handleOptimizeBudget}
+                disabled={isOptimizing}
+                className="p-3 bg-[#FF6B35] hover:bg-[#E85D26] text-white rounded-2xl text-left transition shadow-2xs"
+              >
+                <span className="text-xs font-bold block">
+                  {isOptimizing ? 'Optimizing...' : 'Auto-Optimize to Fit Budget →'}
+                </span>
+                <span className="text-[10px] text-amber-100 block mt-0.5">
+                  Max savings via budget stays and transit
+                </span>
+              </button>
             </div>
           </div>
         ) : (
           <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center space-x-3 text-emerald-900 text-xs">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span>
-              Great planning! Your trip stays comfortably within budget with{' '}
-              <strong className="text-emerald-700">₹{(budget.remainingBudget ?? Math.max(0, budget.budgetTarget - budget.estimatedTotalCost)).toLocaleString('en-IN')}</strong> remaining buffer ({budget.budgetPercentageUsed ?? budgetRatio}% used).
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold text-emerald-800">
+                {budget.status === 'BUDGET_FULLY_USED' ? 'Budget Fully Utilized ✓' : 'Within Budget ✓'}
+              </span>
+              <span className="text-emerald-700">
+                Estimated Total: <strong>₹{budget.estimatedTotalCost.toLocaleString('en-IN')}</strong> of ₹{budget.budgetTarget.toLocaleString('en-IN')} target ({budget.budgetPercentageUsed}% used • ₹{(budget.remainingBudget ?? 0).toLocaleString('en-IN')} remaining buffer).
+              </span>
+            </div>
           </div>
         )}
 
@@ -398,19 +1018,19 @@ export const TripDetailPage: React.FC = () => {
         <div className="space-y-2">
           <div className="flex justify-between text-xs font-bold">
             <span className="text-slate-600">
-              Estimated Total: <span className="text-slate-900">₹{budget.estimatedTotalCost.toLocaleString('en-IN')}</span>
+              {t('estimatedTotalLabel', 'Estimated Total:')} <span className="text-[#0B192C]">₹{budget.estimatedTotalCost.toLocaleString('en-IN')}</span>
             </span>
             <span className="text-slate-600">
-              Remaining: <span className="text-emerald-700">₹{(budget.remainingBudget ?? Math.max(0, budget.budgetTarget - budget.estimatedTotalCost)).toLocaleString('en-IN')}</span>
+              {t('remainingBufferLabel', 'Remaining:')} <span className="text-[#0F766E]">₹{(budget.remainingBudget ?? Math.max(0, budget.budgetTarget - budget.estimatedTotalCost)).toLocaleString('en-IN')}</span>
             </span>
             <span className="text-slate-600">
-              Target Budget: <span className="text-[#1B5E20]">₹{budget.budgetTarget.toLocaleString('en-IN')}</span>
+              {t('targetBudgetLabel', 'Target Budget:')} <span className="text-[#0F766E]">₹{budget.budgetTarget.toLocaleString('en-IN')}</span>
             </span>
           </div>
           <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                budget.isExceeded ? 'bg-rose-500' : 'bg-[#1B5E20]'
+                budget.isExceeded ? 'bg-rose-500' : 'bg-[#0F766E]'
               }`}
               style={{ width: `${Math.min(100, budgetRatio)}%` }}
             />
@@ -420,49 +1040,49 @@ export const TripDetailPage: React.FC = () => {
         {/* 7 Category Breakdown Tiles (SIH Section 4) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 pt-2">
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">Accommodation</span>
-            <span className="text-base font-bold text-slate-900 font-heading">₹{budget.hotelCost?.toLocaleString('en-IN')}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">{t('catAccommodation', 'Accommodation')}</span>
+            <span className="text-base font-bold text-[#0B192C] font-heading">₹{budget.hotelCost?.toLocaleString('en-IN')}</span>
           </div>
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">Food</span>
-            <span className="text-base font-bold text-slate-900 font-heading">₹{budget.foodCost?.toLocaleString('en-IN')}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">{t('catFood', 'Food')}</span>
+            <span className="text-base font-bold text-[#0B192C] font-heading">₹{budget.foodCost?.toLocaleString('en-IN')}</span>
           </div>
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">Transportation</span>
-            <span className="text-base font-bold text-slate-900 font-heading">₹{(budget.transportCost || 0).toLocaleString('en-IN')}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">{t('catTransportation', 'Transportation')}</span>
+            <span className="text-base font-bold text-[#0B192C] font-heading">₹{(budget.transportCost || 0).toLocaleString('en-IN')}</span>
           </div>
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">Activities</span>
-            <span className="text-base font-bold text-slate-900 font-heading">₹{(budget.activitiesCost || 1200).toLocaleString('en-IN')}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">{t('catActivities', 'Activities')}</span>
+            <span className="text-base font-bold text-[#0B192C] font-heading">₹{(budget.activitiesCost || 0).toLocaleString('en-IN')}</span>
           </div>
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">Entry Fees</span>
-            <span className="text-base font-bold text-slate-900 font-heading">₹{budget.entryFeesCost?.toLocaleString('en-IN')}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">{t('catEntryFees', 'Entry Fees')}</span>
+            <span className="text-base font-bold text-[#0B192C] font-heading">₹{budget.entryFeesCost?.toLocaleString('en-IN')}</span>
           </div>
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">Taxi</span>
-            <span className="text-base font-bold text-slate-900 font-heading">₹{(budget.taxiCost || 0).toLocaleString('en-IN')}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">{t('catTaxi', 'Taxi')}</span>
+            <span className="text-base font-bold text-[#0B192C] font-heading">₹{(budget.taxiCost || 0).toLocaleString('en-IN')}</span>
           </div>
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">Miscellaneous</span>
-            <span className="text-base font-bold text-slate-900 font-heading">₹{budget.miscCost?.toLocaleString('en-IN')}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">{t('catMisc', 'Miscellaneous')}</span>
+            <span className="text-base font-bold text-[#0B192C] font-heading">₹{budget.miscCost?.toLocaleString('en-IN')}</span>
           </div>
         </div>
 
         {/* 5 Interactive Optimization Options (SIH Section 4) */}
         <div className="pt-3 border-t border-slate-100 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-800">Budget Optimization Options:</span>
-            <span className="text-[11px] text-slate-500">Click any option to apply instant savings</span>
+            <span className="text-xs font-bold text-slate-800">{t('budgetOptimizationsTitle', 'Budget Optimization Options:')}</span>
+            <span className="text-[11px] text-slate-500">{t('budgetOptimizationsSub', 'Click any option to apply instant savings')}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
             {[
-              { key: 'hotel', label: 'Cheaper hotel', savings: Math.round(budget.hotelCost * 0.35), icon: '🏨', desc: 'Swap with verified heritage homestays' },
-              { key: 'food', label: 'Local restaurant', savings: Math.round(budget.foodCost * 0.28), icon: '🍲', desc: 'Iconic local thalis & authentic street eats' },
-              { key: 'transport', label: 'Public transport', savings: Math.round(((budget.transportCost || 0) + (budget.taxiCost || 0)) * 0.55), icon: '🚇', desc: 'Metro & state AC buses' },
-              { key: 'activity', label: 'Remove expensive activity', savings: Math.round((budget.activitiesCost || 1200) * 0.5), icon: '🎟️', desc: 'Explore free heritage courtyards' },
-              { key: 'taxi', label: 'Reduce taxi usage', savings: Math.round((budget.taxiCost || 800) * 0.45), icon: '🚕', desc: 'Combine walking with e-rickshaws' },
+              { key: 'hotel', label: t('optCheaperHotel', 'Cheaper hotel'), savings: Math.round(budget.hotelCost * 0.35), icon: '🏨', desc: 'Swap with verified heritage homestays' },
+              { key: 'food', label: t('optLocalRestaurant', 'Local restaurant'), savings: Math.round(budget.foodCost * 0.25), icon: '🍲', desc: 'Iconic local thalis & authentic street eats' },
+              { key: 'transport', label: t('optPublicTransport', 'Public transport'), savings: Math.round(((budget.transportCost || 0) + (budget.taxiCost || 0)) * 0.5), icon: '🚇', desc: 'Metro & state AC buses' },
+              { key: 'activity', label: t('optRemoveActivity', 'Free Attractions'), savings: Math.round(((budget.activitiesCost || 0) + (budget.entryFeesCost || 0)) * 0.5), icon: '🎟️', desc: 'Explore free heritage courtyards' },
+              { key: 'taxi', label: t('optReduceTaxi', 'Reduce taxi usage'), savings: Math.round((budget.taxiCost || 0) * 0.4), icon: '🚕', desc: 'Combine walking with e-rickshaws' },
             ].map((opt) => {
               const isApplied = appliedOptimizations.includes(opt.key);
               return (
@@ -473,21 +1093,21 @@ export const TripDetailPage: React.FC = () => {
                   disabled={isApplied}
                   className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
                     isApplied
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-800 opacity-90'
-                      : 'bg-white border-slate-200 hover:border-[#1B5E20] hover:bg-emerald-50/40 text-slate-800'
+                      ? 'bg-teal-50 border-teal-300 text-teal-800 opacity-90'
+                      : 'bg-white border-slate-200 hover:border-[#0F766E] hover:bg-teal-50/30 text-slate-800'
                   }`}
                 >
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-base">{opt.icon}</span>
-                      {isApplied && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                      {isApplied && <CheckCircle2 className="w-3.5 h-3.5 text-[#0F766E]" />}
                     </div>
                     <h5 className="text-xs font-bold font-heading">{opt.label}</h5>
                     <p className="text-[10px] text-slate-500 leading-tight">{opt.desc}</p>
                   </div>
                   <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-emerald-700">-{isApplied ? 'Applied' : `Save ₹${opt.savings}`}</span>
-                    <span className="text-[#1B5E20] text-[10px]">{isApplied ? '✓' : 'Apply →'}</span>
+                    <span className="text-[#0F766E]">-{isApplied ? t('optAppliedBadge', 'Applied') : `Save ₹${opt.savings}`}</span>
+                    <span className="text-[#0F766E] text-[10px]">{isApplied ? '✓' : t('optApplyBtn', 'Apply →')}</span>
                   </div>
                 </button>
               );
@@ -498,10 +1118,10 @@ export const TripDetailPage: React.FC = () => {
         {/* Savings Suggestions */}
         {budget.savingsTips?.length > 0 && (
           <div className="pt-2 text-xs text-slate-600 space-y-1 border-t border-slate-100">
-            <span className="font-bold text-slate-700">Additional Recommendations:</span>
+            <span className="font-bold text-slate-700">{t('additionalRecommendationsTitle', 'Additional Recommendations:')}</span>
             {budget.savingsTips.map((tip, idx) => (
               <p key={idx} className="flex items-center space-x-1.5 text-slate-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#1B5E20]"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0F766E]"></span>
                 <span>{tip}</span>
               </p>
             ))}
@@ -510,20 +1130,20 @@ export const TripDetailPage: React.FC = () => {
       </div>
 
       {/* SMART ROUTE SUMMARY & SELF-VEHICLE LOGISTICS */}
-      <div className="bg-slate-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl space-y-6">
+      <div className="bg-[#0B192C] text-white p-6 sm:p-8 rounded-3xl shadow-xl space-y-6 border border-[#2DD4BF]/20">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#F9C74F]/20 text-[#F9C74F] flex items-center justify-center border border-[#F9C74F]/30">
+            <div className="w-10 h-10 rounded-2xl bg-[#0F766E]/30 text-[#2DD4BF] flex items-center justify-center border border-[#2DD4BF]/30">
               <Compass className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#F9C74F]">Smart Transport Engine</span>
-              <h3 className="text-xl font-bold font-heading text-white">Route Logistics &amp; Travel Plan</h3>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#2DD4BF]">{t('smartTransportTitle', 'Smart Transport Engine')}</span>
+              <h3 className="text-xl font-bold font-heading text-white">{t('routeLogisticsTitle', 'Route Logistics & Travel Plan')}</h3>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-xs bg-emerald-950 text-emerald-300 border border-emerald-800 px-3 py-1 rounded-full font-bold">
-              Mode: {trip.transportMode}
+            <span className="text-xs bg-[#0F766E]/20 text-[#2DD4BF] border border-[#0F766E]/40 px-3 py-1 rounded-full font-bold">
+              {t('transportModeLabel', 'Mode:')} {trip.transportMode}
             </span>
             <span className="text-xs bg-white/10 text-slate-300 px-3 py-1 rounded-full">
               Paced for 0 Backtracking
@@ -534,9 +1154,9 @@ export const TripDetailPage: React.FC = () => {
         {/* Suggested Route Corridor */}
         {trip.routeSummary?.suggestedRoute && (
           <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-1">
-            <div className="flex items-center space-x-2 text-xs text-[#F9C74F] font-bold">
+            <div className="flex items-center space-x-2 text-xs text-[#2DD4BF] font-bold">
               <Navigation className="w-4 h-4" />
-              <span>Recommended Highway &amp; Sightseeing Corridor:</span>
+              <span>{t('corridorLabel', 'Recommended Highway & Sightseeing Corridor:')}</span>
             </div>
             <p className="text-sm text-slate-100 font-medium pl-6">{trip.routeSummary.suggestedRoute}</p>
           </div>
@@ -545,13 +1165,13 @@ export const TripDetailPage: React.FC = () => {
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
           <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-1">
-            <span className="text-slate-400">Total Circuit Distance</span>
+            <span className="text-slate-400">{t('totalCircuitDistanceLabel', 'Total Circuit Distance')}</span>
             <p className="text-xl font-bold font-heading text-white">{trip.routeSummary?.totalDistanceKm || 35} km</p>
-            <span className="text-[10px] text-emerald-400">Optimized cluster sequence</span>
+            <span className="text-[10px] text-[#2DD4BF]">Optimized cluster sequence</span>
           </div>
 
           <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-1">
-            <span className="text-slate-400">Est. Transit Time</span>
+            <span className="text-slate-400">{t('estTransitTimeLabel', 'Est. Transit Time')}</span>
             <p className="text-xl font-bold font-heading text-white">
               {Math.floor((trip.routeSummary?.totalTravelTimeMins || 90) / 60)}h {(trip.routeSummary?.totalTravelTimeMins || 90) % 60}m
             </p>
@@ -559,16 +1179,16 @@ export const TripDetailPage: React.FC = () => {
           </div>
 
           <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-1">
-            <span className="text-slate-400">Estimated Fuel</span>
-            <p className="text-xl font-bold font-heading text-[#F9C74F]">
+            <span className="text-slate-400">{t('estimatedFuelLabel', 'Estimated Fuel')}</span>
+            <p className="text-xl font-bold font-heading text-[#FF6B35]">
               ₹{trip.routeSummary?.fuelEstimate || 1200}
             </p>
             <span className="text-[10px] text-slate-400">Based on standard fuel economy</span>
           </div>
 
           <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-1">
-            <span className="text-slate-400">Tolls &amp; FASTag</span>
-            <p className="text-xl font-bold font-heading text-emerald-300">
+            <span className="text-slate-400">{t('tollsFastagLabel', 'Tolls & FASTag')}</span>
+            <p className="text-xl font-bold font-heading text-[#2DD4BF]">
               ₹{trip.routeSummary?.tollEstimate || 350}
             </p>
             <span className="text-[10px] text-slate-400">NHAI digital FASTag booths</span>
@@ -579,11 +1199,11 @@ export const TripDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           {trip.routeSummary?.majorStops && trip.routeSummary.majorStops.length > 0 && (
             <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2">
-              <span className="text-slate-300 font-bold block">Key Highway Waypoints &amp; Checkpoints:</span>
+              <span className="text-slate-300 font-bold block">{t('highwayWaypointsLabel', 'Key Highway Waypoints & Checkpoints:')}</span>
               <div className="space-y-1.5">
                 {trip.routeSummary.majorStops.map((stop, idx) => (
                   <div key={idx} className="flex items-center space-x-2 text-slate-300">
-                    <span className="w-5 h-5 rounded-full bg-white/10 text-white font-bold flex items-center justify-center text-[10px]">
+                    <span className="w-5 h-5 rounded-full bg-[#0F766E]/40 text-[#2DD4BF] font-bold flex items-center justify-center text-[10px] border border-[#2DD4BF]/30">
                       {idx + 1}
                     </span>
                     <span>{stop}</span>
@@ -594,7 +1214,7 @@ export const TripDetailPage: React.FC = () => {
           )}
 
           <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2">
-            <span className="text-slate-300 font-bold block">Road &amp; Transit Advisory:</span>
+            <span className="text-slate-300 font-bold block">{t('transitAdvisoryLabel', 'Road & Transit Advisory:')}</span>
             <p className="text-slate-300 text-xs leading-relaxed">
               {(trip.routeSummary as any)?.transitAdvice ||
                 'Expressways and key arterial roads have dedicated service lanes, fuel stations, and EV charging corridors every 15-20 km.'}
@@ -639,7 +1259,7 @@ export const TripDetailPage: React.FC = () => {
               </div>
               <Link
                 to={`/hotels?city=${trip.city.id}`}
-                className="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center space-x-1"
+                className="text-xs font-bold text-[#0F766E] hover:text-[#0B192C] flex items-center space-x-1"
               >
                 <span>View all hotels in {trip.city.name}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -662,15 +1282,15 @@ export const TripDetailPage: React.FC = () => {
                     <div>
                       <div className="relative h-48 w-full">
                         <img src={photo} alt={hotel.name} className="w-full h-full object-cover" />
-                        <div className="absolute top-3 left-3 bg-purple-700 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center space-x-1">
-                          <Hotel className="w-3 h-3" />
+                        <div className="absolute top-3 left-3 bg-[#0F766E] text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center space-x-1">
+                          <HotelIcon className="w-3 h-3" />
                           <span>Recommended Stay</span>
                         </div>
                         <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md text-slate-900 text-[11px] font-bold px-2 py-0.5 rounded-lg shadow-sm flex items-center space-x-1">
                           <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                           <span>{hotel.rating || 4.5}</span>
                         </div>
-                        <div className="absolute bottom-3 right-3 bg-slate-950/80 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1 rounded-lg">
+                        <div className="absolute bottom-3 right-3 bg-[#0B192C]/85 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1 rounded-lg">
                           ₹{hotel.price_per_night || 2800} / night
                         </div>
                       </div>
@@ -679,10 +1299,10 @@ export const TripDetailPage: React.FC = () => {
                         <div>
                           <h3 className="font-bold text-base text-slate-900 font-heading">{hotel.name}</h3>
                           <p className="text-xs text-slate-500 flex items-center space-x-1 mt-0.5">
-                            <MapPin className="w-3 h-3 text-slate-400" />
+                            <MapPin className="w-3 h-3 text-[#0F766E]" />
                             <span>{hotel.city_name || trip.city.name}</span>
                             <span className="text-slate-300">•</span>
-                            <span className="text-purple-700 font-medium">{hotel.room_type || 'Deluxe Room'}</span>
+                            <span className="text-[#0F766E] font-medium">{hotel.room_type || 'Deluxe Room'}</span>
                           </p>
                         </div>
 
@@ -693,7 +1313,7 @@ export const TripDetailPage: React.FC = () => {
                         {/* Facilities tags */}
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           {facilities.map((fac: string, fIdx: number) => (
-                            <span key={fIdx} className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-medium">
+                            <span key={fIdx} className="text-[10px] bg-[#0F766E]/10 text-[#0F766E] px-2 py-0.5 rounded-md font-medium">
                               {fac}
                             </span>
                           ))}
@@ -701,7 +1321,7 @@ export const TripDetailPage: React.FC = () => {
 
                         {hotel.phone && (
                           <div className="text-[11px] text-slate-500 flex items-center space-x-1 pt-1">
-                            <Phone className="w-3 h-3 text-purple-600" />
+                            <Phone className="w-3 h-3 text-[#0F766E]" />
                             <span>Front Desk: {hotel.phone}</span>
                           </div>
                         )}
@@ -711,14 +1331,14 @@ export const TripDetailPage: React.FC = () => {
                     <div className="p-5 pt-0 grid grid-cols-2 gap-2">
                       <Link
                         to={hotel.id ? `/hotels/${hotel.id}` : '/hotels'}
-                        className="py-2.5 bg-purple-50 text-purple-800 hover:bg-purple-700 hover:text-white font-bold text-xs rounded-xl text-center flex items-center justify-center space-x-1 transition border border-purple-200"
+                        className="py-2.5 bg-[#0F766E]/10 text-[#0F766E] hover:bg-[#0F766E] hover:text-white font-bold text-xs rounded-xl text-center flex items-center justify-center space-x-1 transition border border-[#0F766E]/20"
                       >
                         <span>View Details</span>
                         <ArrowRight className="w-3 h-3" />
                       </Link>
                       <a
                         href={hotel.phone ? `tel:${hotel.phone}` : '/hotels'}
-                        className="py-2.5 bg-slate-900 hover:bg-purple-900 text-white font-bold text-xs rounded-xl text-center flex items-center justify-center space-x-1 transition"
+                        className="py-2.5 bg-[#0B192C] hover:bg-[#FF6B35] text-white font-bold text-xs rounded-xl text-center flex items-center justify-center space-x-1 transition"
                       >
                         <span>Book / Visit</span>
                       </a>
@@ -944,9 +1564,9 @@ export const TripDetailPage: React.FC = () => {
       {/* DAY-BY-DAY ITINERARY STOPS GROUPED BY TIME SLOTS */}
       <div className="space-y-8">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-[#1B5E20]">Master Day Schedule</span>
-          <h2 className="text-3xl font-bold text-slate-900 mt-1 font-heading">Day-by-Day Journey Schedule</h2>
-          <p className="text-xs text-slate-500">Chronological slots paced for leisurely sightseeing, scenic breaks, and zero backtracking</p>
+          <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E]">{t('masterScheduleTitle', 'Master Day Schedule')}</span>
+          <h2 className="text-3xl font-bold text-[#0B192C] mt-1 font-heading">{t('dayByDayScheduleTitle', 'Day-by-Day Journey Schedule')}</h2>
+          <p className="text-xs text-slate-500">{t('dayScheduleSubtitle', 'Chronological slots paced for leisurely sightseeing, scenic breaks, and zero backtracking')}</p>
         </div>
 
         {trip.days.map((day) => {
@@ -1024,19 +1644,19 @@ export const TripDetailPage: React.FC = () => {
           return (
             <div key={day.dayNumber} className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden space-y-6 pb-6">
               {/* Day Header */}
-              <div className="bg-slate-50 px-6 py-5 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="bg-[#FAF9F6] px-6 py-5 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-xs font-bold text-[#1B5E20] bg-emerald-100/70 border border-emerald-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                      Day {day.dayNumber}
+                    <span className="text-xs font-bold text-[#0F766E] bg-[#0F766E]/10 border border-[#0F766E]/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      {formatDayTitle(day.dayNumber)}
                     </span>
-                    <h3 className="text-xl font-bold text-slate-900 font-heading">{day.dayTitle}</h3>
+                    <h3 className="text-xl font-bold text-[#0B192C] font-heading">{day.dayTitle}</h3>
                   </div>
                   {day.notes && <p className="text-xs text-slate-500 mt-1">{day.notes}</p>}
                 </div>
                 <div className="flex items-center space-x-2 text-xs text-slate-500 font-medium">
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl shadow-2xs">
-                    {day.stops.length} Planned Stops
+                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl shadow-2xs text-[#0B192C] font-semibold">
+                    {day.stops.length} {t('plannedStopsLabel', 'Planned Stops')}
                   </span>
                 </div>
               </div>
@@ -1052,7 +1672,7 @@ export const TripDetailPage: React.FC = () => {
                       <div className={`px-4 py-2.5 rounded-2xl border flex items-center justify-between ${group.headerBg}`}>
                         <div className="flex items-center space-x-2">
                           {group.icon}
-                          <span className="text-xs font-bold font-heading">{group.label}</span>
+                          <span className="text-xs font-bold font-heading">{formatSlotTitle(group.key, group.label)}</span>
                         </div>
                         <span className="text-[11px] font-semibold opacity-80">{group.timeRange}</span>
                       </div>
@@ -1074,7 +1694,7 @@ export const TripDetailPage: React.FC = () => {
                                     alt={stop.title}
                                     className="w-full h-full object-cover"
                                   />
-                                  <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-slate-900/80 text-white font-bold text-xs flex items-center justify-center backdrop-blur-xs">
+                                  <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-[#0B192C]/80 text-white font-bold text-xs flex items-center justify-center backdrop-blur-xs">
                                     {stop.stopOrder}
                                   </div>
                                 </div>
@@ -1095,7 +1715,7 @@ export const TripDetailPage: React.FC = () => {
                                           : 'bg-emerald-100 text-emerald-800'
                                       }`}
                                     >
-                                      {stop.stopType.replace('_', ' ')}
+                                      {formatStopType(stop.stopType)}
                                     </span>
                                     {stop.category && (
                                       <span className="text-xs text-slate-500 font-medium">• {stop.category}</span>
@@ -1110,7 +1730,7 @@ export const TripDetailPage: React.FC = () => {
                                   </div>
                                 </div>
 
-                                <h4 className="text-base font-bold text-slate-900 font-heading">{stop.title}</h4>
+                                <h4 className="text-base font-bold text-[#0B192C] font-heading">{stop.title}</h4>
                                 <p className="text-xs text-slate-600 leading-relaxed">{stop.description}</p>
 
                                 {/* Logistics Meta Pills */}
@@ -1123,7 +1743,7 @@ export const TripDetailPage: React.FC = () => {
                                   )}
                                   {stop.entryFee !== undefined && (
                                     <span className="flex items-center space-x-1 font-semibold text-slate-700">
-                                      <Ticket className="w-3.5 h-3.5 text-[#1B5E20]" />
+                                      <Ticket className="w-3.5 h-3.5 text-[#0F766E]" />
                                       <span>Entry: {stop.entryFee === 0 ? 'Free Entry' : `₹${stop.entryFee} / person`}</span>
                                     </span>
                                   )}
@@ -1137,7 +1757,7 @@ export const TripDetailPage: React.FC = () => {
 
                                 {/* Transport Notes */}
                                 {stop.transportNotes && (
-                                  <div className="text-[11px] text-[#1B5E20] font-medium bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
+                                  <div className="text-[11px] text-[#0F766E] font-medium bg-[#0F766E]/5 p-2.5 rounded-xl border border-[#0F766E]/15">
                                     👉 {stop.transportNotes}
                                   </div>
                                 )}
@@ -1147,9 +1767,9 @@ export const TripDetailPage: React.FC = () => {
                                   {stop.entityId && stop.entityType === 'PLACE' && (
                                     <Link
                                       to={`/places/${stop.entityId}`}
-                                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-[#1B5E20] text-[#1B5E20] hover:text-white text-xs font-bold transition border border-emerald-200"
+                                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#0F766E]/10 hover:bg-[#0F766E] text-[#0F766E] hover:text-white text-xs font-bold transition border border-[#0F766E]/20"
                                     >
-                                      <span>View Place Details &amp; Gallery</span>
+                                      <span>{t('viewPlaceGalleryBtn', 'View Place Details & Gallery')}</span>
                                       <ArrowRight className="w-3.5 h-3.5" />
                                     </Link>
                                   )}
@@ -1158,7 +1778,7 @@ export const TripDetailPage: React.FC = () => {
                                       to={`/hotels/${stop.entityId}`}
                                       className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-700 text-purple-900 hover:text-white text-xs font-bold transition border border-purple-200"
                                     >
-                                      <span>View Hotel Rooms &amp; Amenities</span>
+                                      <span>{t('viewHotelRoomsBtn', 'View Hotel Rooms & Amenities')}</span>
                                       <ArrowRight className="w-3.5 h-3.5" />
                                     </Link>
                                   )}
@@ -1167,7 +1787,7 @@ export const TripDetailPage: React.FC = () => {
                                       to={`/restaurants/${stop.entityId}`}
                                       className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-600 text-amber-900 hover:text-white text-xs font-bold transition border border-amber-200"
                                     >
-                                      <span>View Restaurant Menu &amp; Dishes</span>
+                                      <span>{t('viewRestaurantMenuBtn', 'View Restaurant Details & Menu')}</span>
                                       <ArrowRight className="w-3.5 h-3.5" />
                                     </Link>
                                   )}
@@ -1176,7 +1796,7 @@ export const TripDetailPage: React.FC = () => {
                                       to="/hidden-gems"
                                       className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-700 text-teal-900 hover:text-white text-xs font-bold transition border border-teal-200"
                                     >
-                                      <span>Explore All Hidden Gems</span>
+                                      <span>{t('exploreAllGemsBtn', 'Explore All Hidden Gems')}</span>
                                       <ArrowRight className="w-3.5 h-3.5" />
                                     </Link>
                                   )}
@@ -1187,16 +1807,158 @@ export const TripDetailPage: React.FC = () => {
                                       setDefaultDrop(stop.title);
                                       setBookingModalOpen(true);
                                     }}
-                                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white text-xs font-semibold transition border border-slate-200"
+                                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-[#0B192C] text-slate-700 hover:text-white text-xs font-semibold transition border border-slate-200"
                                   >
-                                    <Car className="w-3.5 h-3.5 text-amber-500" />
-                                    <span>Book Taxi to Stop</span>
+                                    <Car className="w-3.5 h-3.5 text-[#FF6B35]" />
+                                    <span>{t('bookTaxiStopBtn', 'Book Taxi to Stop')}</span>
                                   </button>
                                 </div>
                               </div>
                             </div>
                           );
                         })}
+
+                        {/* Afternoon Slot Lunch Recommendation Card */}
+                        {group.key === 'Afternoon' && (() => {
+                          const lunch = getRestaurantForSlot(day.dayNumber, 'lunch');
+                          return (
+                            <div className="bg-[#FAF9F6] border-2 border-[#0F766E]/25 hover:border-[#0F766E]/50 rounded-2xl p-4 sm:p-5 shadow-xs transition space-y-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+                                <div className="flex items-center space-x-2">
+                                  <span className="bg-[#FF6B35] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs flex items-center space-x-1">
+                                    <Utensils className="w-3 h-3" />
+                                    <span>{t('aiLunchTitle', 'AI Lunch Recommendation')}</span>
+                                  </span>
+                                  <span className="text-xs font-semibold text-[#0F766E]">{lunch.dining.cuisine}</span>
+                                </div>
+                                <div className="flex items-center space-x-3 text-xs">
+                                  <span className="flex items-center space-x-1 text-slate-800 font-bold bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                    <span>{lunch.dining.rating || 4.7}</span>
+                                  </span>
+                                  <span className="text-slate-500 font-medium">₹{lunch.costPerPerson} / {t('dayUnit', 'person')}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                                <div className="relative w-full sm:w-44 h-32 rounded-xl overflow-hidden shrink-0">
+                                  <img
+                                    src={lunch.photo}
+                                    alt={lunch.dining.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <h5 className="text-base font-bold text-[#0B192C] font-heading">{lunch.dining.name}</h5>
+                                    <span className="text-xs font-bold text-[#0F766E] bg-[#0F766E]/10 px-2.5 py-0.5 rounded-md">
+                                      {t('estGroupCostLabel', 'Est. Group Cost:')} ₹{lunch.groupCost.toLocaleString('en-IN')} ({trip.travellersCount} {trip.travellersCount === 1 ? 'person' : 'people'})
+                                    </span>
+                                  </div>
+
+                                  <p className="text-xs text-slate-600 leading-relaxed">{lunch.dining.description}</p>
+
+                                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase">{t('mustTryLabel', 'Must Try:')}</span>
+                                    {lunch.dishes.map((dish: string, dIdx: number) => (
+                                      <span key={dIdx} className="text-[11px] bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-md font-medium">
+                                        {dish}
+                                      </span>
+                                    ))}
+                                  </div>
+
+                                  <div className="p-2.5 bg-[#0F766E]/5 rounded-xl border border-[#0F766E]/15 text-[11px] text-[#0F766E] font-medium flex items-start space-x-1.5">
+                                    <Sparkles className="w-3.5 h-3.5 text-[#FF6B35] shrink-0 mt-0.5" />
+                                    <span>{lunch.whyAI}</span>
+                                  </div>
+
+                                  <div className="pt-1 flex items-center justify-between">
+                                    <Link
+                                      to={`/restaurants/${lunch.dining.id}`}
+                                      className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-[#0F766E] hover:bg-[#0B192C] text-white text-xs font-bold transition shadow-xs"
+                                    >
+                                      <span>{t('viewRestaurantMenuBtn', 'View Restaurant Details & Menu')}</span>
+                                      <ArrowRight className="w-3.5 h-3.5 text-[#2DD4BF]" />
+                                    </Link>
+                                    <span className="text-[11px] text-slate-400">Paced for midday recharge</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Night Slot Dinner Recommendation Card */}
+                        {group.key === 'Night' && (() => {
+                          const dinner = getRestaurantForSlot(day.dayNumber, 'dinner');
+                          return (
+                            <div className="bg-[#FAF9F6] border-2 border-[#0F766E]/25 hover:border-[#0F766E]/50 rounded-2xl p-4 sm:p-5 shadow-xs transition space-y-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+                                <div className="flex items-center space-x-2">
+                                  <span className="bg-[#FF6B35] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs flex items-center space-x-1">
+                                    <Utensils className="w-3 h-3" />
+                                    <span>{t('aiDinnerTitle', 'AI Dinner Recommendation')}</span>
+                                  </span>
+                                  <span className="text-xs font-semibold text-[#0F766E]">{dinner.dining.cuisine}</span>
+                                </div>
+                                <div className="flex items-center space-x-3 text-xs">
+                                  <span className="flex items-center space-x-1 text-slate-800 font-bold bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                    <span>{dinner.dining.rating || 4.7}</span>
+                                  </span>
+                                  <span className="text-slate-500 font-medium">₹{dinner.costPerPerson} / {t('dayUnit', 'person')}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                                <div className="relative w-full sm:w-44 h-32 rounded-xl overflow-hidden shrink-0">
+                                  <img
+                                    src={dinner.photo}
+                                    alt={dinner.dining.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <h5 className="text-base font-bold text-[#0B192C] font-heading">{dinner.dining.name}</h5>
+                                    <span className="text-xs font-bold text-[#0F766E] bg-[#0F766E]/10 px-2.5 py-0.5 rounded-md">
+                                      {t('estGroupCostLabel', 'Est. Group Cost:')} ₹{dinner.groupCost.toLocaleString('en-IN')} ({trip.travellersCount} {trip.travellersCount === 1 ? 'person' : 'people'})
+                                    </span>
+                                  </div>
+
+                                  <p className="text-xs text-slate-600 leading-relaxed">{dinner.dining.description}</p>
+
+                                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase">{t('mustTryLabel', 'Must Try:')}</span>
+                                    {dinner.dishes.map((dish: string, dIdx: number) => (
+                                      <span key={dIdx} className="text-[11px] bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-md font-medium">
+                                        {dish}
+                                      </span>
+                                    ))}
+                                  </div>
+
+                                  <div className="p-2.5 bg-[#0F766E]/5 rounded-xl border border-[#0F766E]/15 text-[11px] text-[#0F766E] font-medium flex items-start space-x-1.5">
+                                    <Sparkles className="w-3.5 h-3.5 text-[#FF6B35] shrink-0 mt-0.5" />
+                                    <span>{dinner.whyAI}</span>
+                                  </div>
+
+                                  <div className="pt-1 flex items-center justify-between">
+                                    <Link
+                                      to={`/restaurants/${dinner.dining.id}`}
+                                      className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-[#0F766E] hover:bg-[#0B192C] text-white text-xs font-bold transition shadow-xs"
+                                    >
+                                      <span>{t('viewRestaurantMenuBtn', 'View Restaurant Details & Menu')}</span>
+                                      <ArrowRight className="w-3.5 h-3.5 text-[#2DD4BF]" />
+                                    </Link>
+                                    <span className="text-[11px] text-slate-400">Convenient return route stop</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   );
@@ -1206,10 +1968,11 @@ export const TripDetailPage: React.FC = () => {
           );
         })}
       </div>
+      </>)}
 
       {/* Skyline footer accent */}
       <div className="pt-6">
-        <IndianMonumentsSkyline className="w-full text-emerald-800/15" tagline="Bharat Ki Khoj Ab Aur Aasaan • Built in Haryana, Designed for India" />
+        <IndianMonumentsSkyline className="w-full text-[#0F766E]/15" tagline="Bharat Ki Khoj Ab Aur Aasaan • Designed for India" />
       </div>
 
       {/* Taxi Booking Modal */}

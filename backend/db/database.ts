@@ -22,6 +22,13 @@ class DatabaseManager {
     if (fs.existsSync(this.dbPath)) {
       const fileBuffer = fs.readFileSync(this.dbPath);
       this.db = new SQL.Database(fileBuffer);
+      // Safe schema migration for newly added columns
+      try {
+        this.db.run("ALTER TABLE restaurants ADD COLUMN food_type TEXT DEFAULT 'both';");
+        this.save();
+      } catch {
+        // column already exists, safe to ignore
+      }
     } else {
       this.db = new SQL.Database();
       const schemaPath = path.join(__dirname, 'schema.sql');

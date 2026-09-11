@@ -1,11 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --color-haryana-green: #1B5E20;
-  --color-haryana-green-dark: #144818;
-  --color-haryana-green-light: #2E7D32;
-  --color-mustard-yellow: #F9C74F;
-  --color-saffron-orange: #F3722C;
+  /* Official 5-Color Theme System */
+  --color-navy: #0B192C;
+  --color-navy-dark: #07101C;
+  --color-navy-light: #1E3E62;
+  
+  --color-teal: #0F766E;
+  --color-teal-dark: #115E59;
+  --color-teal-light: #0D9488;
+  
+  --color-aqua: #2DD4BF;
+  --color-aqua-light: #CCFBF1;
+  --color-aqua-subtle: #F0FDFA;
+  
+  --color-offwhite: #FAF9F6;
+  --color-offwhite-alt: #F8FAFC;
+  
+  --color-orange: #FF6B35;
+  --color-orange-dark: #EA580C;
+  --color-orange-light: #FF8C5A;
+
+  /* Legacy Class Aliases for Harmonization */
+  --color-haryana-green: #0F766E;
+  --color-haryana-green-dark: #0B192C;
+  --color-haryana-green-light: #2DD4BF;
+  --color-mustard-yellow: #FF6B35;
+  --color-saffron-orange: #FF6B35;
   --color-cream-white: #FAF9F6;
 }
 
@@ -13,7 +34,7 @@
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: #FAF9F6;
-    color: #1F2937;
+    color: #1E293B;
   }
 
   h1, h2, h3, .font-heading {
@@ -21,54 +42,71 @@
   }
 }
 
-/* Reference Theme Color Utilities */
-.bg-haryana-green {
-  background-color: #1B5E20;
+/* 1. Dark Navy */
+.bg-navy { background-color: #0B192C; }
+.bg-navy-dark { background-color: #07101C; }
+.bg-navy-light { background-color: #1E3E62; }
+.text-navy { color: #0B192C; }
+.border-navy { border-color: #0B192C; }
+
+/* 2. Teal Blue */
+.bg-teal { background-color: #0F766E; }
+.bg-teal-dark { background-color: #115E59; }
+.bg-teal-light { background-color: #0D9488; }
+.hover\:bg-teal:hover { background-color: #0F766E; }
+.hover\:bg-teal-dark:hover { background-color: #115E59; }
+.text-teal { color: #0F766E; }
+.border-teal { border-color: #0F766E; }
+
+/* 3. Muted Aqua */
+.bg-aqua { background-color: #2DD4BF; }
+.bg-aqua-light { background-color: #CCFBF1; }
+.bg-aqua-subtle { background-color: #F0FDFA; }
+.text-aqua { color: #0D9488; }
+.border-aqua { border-color: #2DD4BF; }
+.border-aqua-subtle { border-color: #CCFBF1; }
+
+/* 4. Warm Off White */
+.bg-offwhite { background-color: #FAF9F6; }
+.text-offwhite { color: #FAF9F6; }
+
+/* 5. Orange (Primary CTA & Active Highlights) */
+.bg-orange-primary { background-color: #FF6B35; }
+.hover\:bg-orange-dark:hover { background-color: #EA580C; }
+.text-orange-primary { color: #FF6B35; }
+.border-orange-primary { border-color: #FF6B35; }
+
+/* Legacy Class Aliases */
+.bg-haryana-green { background-color: #0F766E; }
+.hover\:bg-haryana-green-dark:hover { background-color: #0B192C; }
+.text-haryana-green { color: #0F766E; }
+.border-haryana-green { border-color: #0F766E; }
+.bg-mustard-yellow { background-color: #FF6B35; }
+.text-mustard-yellow { color: #FF6B35; }
+.border-mustard-yellow { border-color: #FF6B35; }
+.bg-saffron-orange { background-color: #FF6B35; }
+.text-saffron-orange { color: #FF6B35; }
+.bg-cream { background-color: #FAF9F6; }
+
+/* Gradients */
+.bg-gradient-navy {
+  background: linear-gradient(135deg, #07101C 0%, #0B192C 60%, #1E3E62 100%);
 }
 
-.hover\:bg-haryana-green-dark:hover {
-  background-color: #144818;
+.bg-gradient-teal {
+  background: linear-gradient(135deg, #0B192C 0%, #0F766E 70%, #2DD4BF 100%);
 }
 
-.text-haryana-green {
-  color: #1B5E20;
+.bg-gradient-orange {
+  background: linear-gradient(135deg, #FF6B35 0%, #EA580C 100%);
 }
 
-.border-haryana-green {
-  border-color: #1B5E20;
-}
-
-.bg-mustard-yellow {
-  background-color: #F9C74F;
-}
-
-.text-mustard-yellow {
-  color: #B27B08;
-}
-
-.border-mustard-yellow {
-  border-color: #F9C74F;
-}
-
-.bg-saffron-orange {
-  background-color: #F3722C;
-}
-
-.text-saffron-orange {
-  color: #F3722C;
-}
-
-.bg-cream {
-  background-color: #FAF9F6;
-}
-
-/* Gradients matching Reference Theme */
 .bg-gradient-haryana {
-  background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 60%, #F9C74F 100%);
+  background: linear-gradient(135deg, #0B192C 0%, #0F766E 60%, #FF6B35 100%);
 }
 
 .bg-gradient-hero {
-  background: linear-gradient(180deg, #1B5E20 0%, #144818 100%);
+  background: linear-gradient(180deg, #07101C 0%, #0B192C 100%);
 }
 
 .bg-gradient-cream {
@@ -81,14 +119,21 @@
 
 .card-hover:hover {
   transform: translateY(-3px);
-  box-shadow: 0 14px 28px -6px rgba(27, 94, 32, 0.12);
+  box-shadow: 0 14px 28px -6px rgba(11, 25, 44, 0.15);
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(27, 94, 32, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.15);
+}
+
+.glass-panel-dark {
+  background: rgba(11, 25, 44, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(45, 212, 191, 0.2);
 }
 
 /* Custom subtle scrollbar */
@@ -100,11 +145,11 @@
   background: #FAF9F6;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #94A3B8;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #1B5E20;
+  background: #0F766E;
 }
 
 /* Print & PDF Export Styles */

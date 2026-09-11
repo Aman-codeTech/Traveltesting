@@ -15,6 +15,7 @@ export const generateTrip = async (req: Request, res: Response): Promise<void> =
       transportMode = 'Taxi',
       interests = ['Heritage', 'Culture', 'Food'],
       travellerType = 'Couple',
+      foodPreference,
     } = req.body;
 
     if (!cityId) {
@@ -32,6 +33,7 @@ export const generateTrip = async (req: Request, res: Response): Promise<void> =
       transportMode,
       interests: Array.isArray(interests) ? interests : [interests],
       travellerType,
+      foodPreference: foodPreference === 'veg' || foodPreference === 'non_veg' ? foodPreference : undefined,
     };
 
     const trip = RecommendationEngine.generateTrip(input, false);
@@ -61,18 +63,20 @@ export const optimizeTrip = async (req: Request, res: Response): Promise<void> =
       transportMode,
       interests,
       travellerType,
+      foodPreference,
     } = req.body;
 
     const input: PlanTripInput = {
       cityId: Number(cityId),
       budgetTarget: Number(budgetTarget),
-      daysCount: Number(daysCount),
-      travellersCount: Number(travellersCount),
-      adultsCount: Number(adultsCount),
-      childrenCount: Number(childrenCount),
-      transportMode,
-      interests: Array.isArray(interests) ? interests : [interests],
-      travellerType,
+      daysCount: Math.min(10, Math.max(1, Number(daysCount) || 1)),
+      travellersCount: Number(travellersCount) || (Number(adultsCount || 0) + Number(childrenCount || 0)) || 1,
+      adultsCount: Number(adultsCount) || Number(travellersCount) || 1,
+      childrenCount: Number(childrenCount) || 0,
+      transportMode: transportMode || 'Taxi',
+      interests: Array.isArray(interests) ? interests : [interests || 'Heritage'],
+      travellerType: travellerType || 'Couple',
+      foodPreference: foodPreference === 'veg' || foodPreference === 'non_veg' ? foodPreference : undefined,
     };
 
     const trip = RecommendationEngine.generateTrip(input, true);

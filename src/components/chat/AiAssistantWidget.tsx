@@ -64,12 +64,14 @@ export const AiAssistantWidget: React.FC = () => {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInputMessage('');
     setIsLoading(true);
 
     try {
-      const res = await api.aiChat(text);
+      // Pass full conversation history for multi-turn context awareness
+      const res = await api.aiChat(text, newMessages);
       if (res.success && res.reply) {
         const aiMsg: ChatMessage = {
           id: (Date.now() + 1).toString(),
@@ -100,10 +102,10 @@ export const AiAssistantWidget: React.FC = () => {
       {
         id: 'welcome',
         sender: 'ai',
-        text: 'Namaste! 🙏 I am your **TravelSaathi AI Assistant**.\n\nAsk me anything about Indian destinations, budget optimizations, regional foods, or hidden gems!',
+        text: 'Namaste! 🙏 I am your **TravelSaathi AI Assistant**.\n\nI remember your destinations, budget, group size, and preferences throughout our chat!\n\nAsk me anything about Indian destinations, budget planning, stays, regional food, or local cabs!',
         timestamp: 'Just now',
         suggestions: [
-          'Top places to visit in Jaipur',
+          'Plan a trip to Jaipur',
           'Plan a 3-day trip under ₹15,000',
           'Best street food in Delhi',
           'Hidden gems in Agra',
@@ -118,12 +120,12 @@ export const AiAssistantWidget: React.FC = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex items-center space-x-2 bg-gradient-to-r from-[#1B5E20] via-[#2E7D32] to-[#154a19] text-white px-4 py-3 rounded-full shadow-2xl hover:shadow-emerald-900/40 hover:scale-105 active:scale-95 transition-all group border border-emerald-400/30"
+          className="fixed bottom-6 right-6 z-50 flex items-center space-x-2 bg-[#0B192C] text-[#FAF9F6] px-4 py-3 rounded-full shadow-2xl hover:shadow-black/50 hover:scale-105 active:scale-95 transition-all group border border-[#2DD4BF]/40"
           aria-label="Open AI Assistant"
         >
           <div className="relative">
-            <Sparkles className="w-5 h-5 text-[#F9C74F] group-hover:rotate-12 transition-transform" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#F9C74F] rounded-full animate-ping"></span>
+            <Sparkles className="w-5 h-5 text-[#FF6B35] group-hover:rotate-12 transition-transform" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#2DD4BF] rounded-full animate-ping"></span>
           </div>
           <span className="text-xs font-bold font-heading tracking-wide pr-1">Ask AI Saathi</span>
         </button>
@@ -131,19 +133,19 @@ export const AiAssistantWidget: React.FC = () => {
 
       {/* Floating Chat Modal */}
       {isOpen && (
-        <div className="fixed bottom-6 right-4 sm:right-6 z-50 w-[92vw] sm:w-96 max-h-[600px] h-[550px] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
+        <div className="fixed bottom-6 right-4 sm:right-6 z-50 w-[92vw] sm:w-96 max-h-[600px] h-[550px] bg-[#FAF9F6] rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#1B5E20] via-[#2E7D32] to-[#154a19] px-5 py-4 text-white flex items-center justify-between shrink-0">
+          <div className="bg-[#0B192C] px-5 py-4 text-white flex items-center justify-between shrink-0 border-b border-[#0F766E]/40">
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
-                <Sparkles className="w-5 h-5 text-[#F9C74F]" />
+              <div className="w-9 h-9 rounded-2xl bg-[#0F766E]/50 backdrop-blur-md flex items-center justify-center border border-[#2DD4BF]/40">
+                <Sparkles className="w-5 h-5 text-[#FF6B35]" />
               </div>
               <div>
                 <h4 className="font-bold text-sm font-heading flex items-center space-x-1.5">
-                  <span>TravelSaathi AI</span>
-                  <span className="w-2 h-2 rounded-full bg-[#F9C74F]"></span>
+                  <span className="text-white">TravelSaathi AI</span>
+                  <span className="w-2 h-2 rounded-full bg-[#2DD4BF] animate-pulse"></span>
                 </h4>
-                <p className="text-[10px] text-emerald-100">Live Tourism &amp; Itinerary Advisor</p>
+                <p className="text-[10px] text-[#2DD4BF]">Context-Aware Indian Tourism Companion</p>
               </div>
             </div>
 
@@ -176,20 +178,19 @@ export const AiAssistantWidget: React.FC = () => {
                 >
                   <div className="flex items-end space-x-2 max-w-[88%]">
                     {isAi && (
-                      <div className="w-6 h-6 rounded-full bg-emerald-100 text-[#1B5E20] flex items-center justify-center text-[10px] font-bold shrink-0 mb-1">
+                      <div className="w-6 h-6 rounded-full bg-[#0F766E]/20 text-[#0F766E] flex items-center justify-center text-[10px] font-bold shrink-0 mb-1 border border-[#2DD4BF]/30">
                         <Bot className="w-3.5 h-3.5" />
                       </div>
                     )}
                     <div
                       className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
                         isAi
-                          ? 'bg-white border border-slate-200/80 text-slate-800 shadow-2xs'
-                          : 'bg-[#1B5E20] text-white shadow-xs'
+                          ? 'bg-white border border-[#2DD4BF]/30 text-[#0B192C] shadow-2xs'
+                          : 'bg-gradient-to-r from-[#FF6B35] to-[#E85D04] text-white shadow-xs'
                       }`}
                     >
                       <div className="whitespace-pre-line space-y-1">
                         {msg.text.split('\n').map((line, lIdx) => {
-                          // Basic bold markdown parser
                           const parts = line.split(/(\*\*.*?\*\*)/g);
                           return (
                             <p key={lIdx}>
@@ -217,7 +218,7 @@ export const AiAssistantWidget: React.FC = () => {
                         <button
                           key={sIdx}
                           onClick={() => handleSendMessage(sug)}
-                          className="px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#1B5E20] text-[10px] font-semibold transition"
+                          className="px-2.5 py-1 rounded-full bg-[#0F766E]/10 hover:bg-[#0F766E]/20 border border-[#0F766E]/30 text-[#0F766E] text-[10px] font-semibold transition hover:scale-105"
                         >
                           {sug} →
                         </button>
@@ -231,9 +232,9 @@ export const AiAssistantWidget: React.FC = () => {
             })}
 
             {isLoading && (
-              <div className="flex items-center space-x-2 text-slate-400 text-xs pl-8">
-                <div className="w-4 h-4 border-2 border-[#1B5E20] border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-[11px]">Thinking with TravelSaathi AI...</span>
+              <div className="flex items-center space-x-2 text-slate-500 text-xs pl-8">
+                <div className="w-4 h-4 border-2 border-[#0F766E] border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-[11px] font-medium text-[#0F766E]">Thinking with TravelSaathi AI...</span>
               </div>
             )}
 
@@ -241,11 +242,11 @@ export const AiAssistantWidget: React.FC = () => {
           </div>
 
           {/* Quick Action Footer Bar */}
-          <div className="px-4 py-2 bg-slate-100/70 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+          <div className="px-4 py-2.5 bg-[#FAF9F6] border-t border-slate-200/80 flex items-center justify-between text-[11px]">
             <Link
               to="/plan-trip"
               onClick={() => setIsOpen(false)}
-              className="text-[#1B5E20] font-bold flex items-center space-x-1 hover:underline"
+              className="text-[#0F766E] font-bold flex items-center space-x-1 hover:underline"
             >
               <Compass className="w-3.5 h-3.5" />
               <span>Full Trip Planner</span>
@@ -253,7 +254,7 @@ export const AiAssistantWidget: React.FC = () => {
             <Link
               to="/explore"
               onClick={() => setIsOpen(false)}
-              className="text-slate-600 font-medium hover:text-[#1B5E20]"
+              className="text-slate-600 font-medium hover:text-[#0F766E]"
             >
               Explore Cities →
             </Link>
@@ -265,19 +266,19 @@ export const AiAssistantWidget: React.FC = () => {
               e.preventDefault();
               handleSendMessage();
             }}
-            className="p-3 bg-white border-t border-slate-100 flex items-center space-x-2"
+            className="p-3 bg-white border-t border-slate-200/80 flex items-center space-x-2"
           >
             <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Ask about cities, routes, budget..."
-              className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-[#1B5E20]/20 focus:border-[#1B5E20]"
+              placeholder="Ask about cities, hotels, food, taxis..."
+              className="flex-1 px-3.5 py-2.5 bg-[#FAF9F6] border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] text-[#0B192C]"
             />
             <button
               type="submit"
               disabled={isLoading || !inputMessage.trim()}
-              className="p-2.5 bg-[#1B5E20] hover:bg-[#154a19] disabled:opacity-50 text-white rounded-xl transition shadow-xs"
+              className="p-2.5 bg-gradient-to-r from-[#FF6B35] to-[#E85D04] hover:opacity-90 disabled:opacity-50 text-white rounded-xl transition shadow-xs"
             >
               <Send className="w-4 h-4" />
             </button>
