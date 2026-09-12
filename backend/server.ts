@@ -4,6 +4,16 @@ import dotenv from 'dotenv';
 import apiRoutes from './routes/api';
 import { dbManager } from './db/database';
 import { runSeed } from './db/seed';
+import cors from 'cors';
+
+app.use(cors({
+  origin: [
+    'https://your-vercel-app-name.vercel.app', // Replace with your actual Vercel domain
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ],
+  credentials: true
+}));
 
 dotenv.config();
 
