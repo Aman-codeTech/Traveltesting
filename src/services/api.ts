@@ -1,6 +1,22 @@
 const API_BASE = '/api';
 // Replace local URLs with your live Render URL
 const API_BASE_URL = 'https://traveltesting.onrender.com/api';
+// src/services/api.ts
+
+const API_BASE_URL = 'https://traveltesting.onrender.com/api';
+
+export const fetchCities = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/cities`);
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Failed to fetch cities:", error);
+    return [];
+  }
+};
 
 export const fetchCities = async () => {
   const response = await fetch(`${API_BASE_URL}/cities`);
