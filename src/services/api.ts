@@ -1,4 +1,11 @@
 const API_BASE = '/api';
+// Replace local URLs with your live Render URL
+const API_BASE_URL = 'https://traveltesting.onrender.com/api';
+
+export const fetchCities = async () => {
+  const response = await fetch(`${API_BASE_URL}/cities`);
+  return response.json();
+};
 
 export function getToken(): string | null {
   return localStorage.getItem('travelsaathi_token');
