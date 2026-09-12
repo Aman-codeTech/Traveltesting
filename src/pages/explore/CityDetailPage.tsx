@@ -1,5 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { fetchCities } from '../services/api';
+
+export default function CitiesList() {
+  const [cities, setCities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCities().then((data) => {
+      setCities(data);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return <p>Loading cities...</p>;
+
+  return (
+    <div>
+      {cities.map((city: any) => (
+        <div key={city.id}>{city.name}</div>
+      ))}
+    </div>
+  );
+}
 import { api } from '../../services/api';
 import {
   MapPin,
